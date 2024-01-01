@@ -3,6 +3,9 @@ Super Smash Bros. Brawl(SSBB, Brawl) music player for [dolphin emulator](https:/
 Works with RSBE and RSBJ.  
 Works on Linux and Windows.
 
+## Motive
+https://nisety.net/posts/2023/12/27/dolphin-emulator-brawl-custom-musics/#%E5%8B%95%E6%A9%9F
+
 ## Demo
 https://www.youtube.com/watch?v=XIIiO7Qqtvs
 
