@@ -6,7 +6,7 @@ Works on Linux and Windows.
 ## Demo
 https://www.youtube.com/watch?v=XIIiO7Qqtvs
 
-## Dependencies(included in the source directly)
+## Dependencies
 * Python Dolphin Memory Engine: https://github.com/henriquegemignani/py-dolphin-memory-engine
 * C++ fmt Library: https://github.com/fmtlib/fmt
 * miniaudio: https://github.com/mackron/miniaudio#license
