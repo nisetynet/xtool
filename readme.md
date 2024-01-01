@@ -27,6 +27,9 @@ cmake ..
 ```
 And build the generated visual studio project.
 
+## Usage
+TODO
+
 ## ⚠️
 Some features are broken.  
 See https://nisety.net/posts/2023/12/27/dolphin-emulator-brawl-custom-musics/#%E5%95%8F%E9%A1%8C%E7%82%B9%E7%AD%89 for details.
