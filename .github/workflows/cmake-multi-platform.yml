@@ -81,13 +81,8 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --build-config ${{ matrix.build_type }}
     - name: Create Archive
-      uses: thedoctor0/zip-release@0.7.5
-      with:
-        type: 'zip'
-        filename: 'build.zip'
-        path: 'xtool*'
-        exclusions: '*.git* /*node_modules/* .editorconfig'
-        directory: '${{ steps.strings.outputs.build-output-dir }}'
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: zip build.zip xtool xtool.exe
     - name: Upload Archive
       uses: ncipollo/release-action@v1.13.0
       with:
