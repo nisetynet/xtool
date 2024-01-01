@@ -85,7 +85,7 @@ jobs:
       with:
         type: 'zip'
         filename: 'build.zip'
-        path: 'xtool.exe xtool'
+        path: 'xtool*'
         exclusions: '*.git* /*node_modules/* .editorconfig'
         directory: '${{ steps.strings.outputs.build-output-dir }}'
     - name: Upload Archive
