@@ -1,5 +1,5 @@
 ## xtool
-Super Smash Bros. Brawl(SSBB, Brawl) music player for dolphin.  
+Super Smash Bros. Brawl(SSBB, Brawl) music player for [dolphin emulator](https://dolphin-emu.org/).  
 Works with RSBE and RSBJ.  
 Works on Linux and Windows.
 
