@@ -49,7 +49,6 @@ jobs:
             c_compiler: cl
 
     steps:
-    - uses: ncipollo/release-action@v1.12.0
     - uses: actions/checkout@v3
       with:
         # Recursive clone
@@ -90,7 +89,7 @@ jobs:
         exclusions: '*.git* /*node_modules/* .editorconfig'
         directory: '${{ steps.strings.outputs.build-output-dir }}'
     - name: Upload Archive
-      uses: ncipollo/release-action@v1.12.0
+      uses: ncipollo/release-action@v1.13.0
       with:
         artifacts: "build.zip"
         token: ${{ secrets.GITHUB_TOKEN }}
