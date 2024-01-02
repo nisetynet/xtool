@@ -18,6 +18,12 @@ Modified and directly included in the source.
 ## How to build
 You need a C++ compiler and [cmake](https://cmake.org/download/) to build.
 
+First, clone the repository.
+
+```bash
+git clone --recursive https://github.com/nisetynet/xtool
+```
+
 ### Linux
 In the source root directory, run
 ```bash
