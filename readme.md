@@ -10,10 +10,11 @@ https://nisety.net/posts/2023/12/27/dolphin-emulator-brawl-custom-musics/#%E5%8B
 https://www.youtube.com/watch?v=XIIiO7Qqtvs
 
 ## Dependencies
-* Python Dolphin Memory Engine: https://github.com/henriquegemignani/py-dolphin-memory-engine
+* py-dolphin-memory-engine: https://github.com/henriquegemignani/py-dolphin-memory-engine  
+Modified and directly included in the source.
 * C++ fmt Library: https://github.com/fmtlib/fmt
 * miniaudio: https://github.com/mackron/miniaudio#license
-
+* toml++: https://marzer.github.io/tomlplusplus/
 ## How to build
 You need a C++ compiler and [cmake](https://cmake.org/download/) to build.
 
