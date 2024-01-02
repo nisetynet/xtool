@@ -21,15 +21,15 @@ You need a C++ compiler and [cmake](https://cmake.org/download/) to build.
 ### Linux
 In the source root directory, run
 ```bash
-mkdir build && cd build && cmake .. && make -j$(nproc)
+cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
 ```
+Replace `clang` with `g++` to build with g++.
 
 ### Windows
 In the source root directory, run
 ```bash
-cmake ..
+cmake -B build -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
 ```
-And build the generated visual studio project.
 
 ## Usage
 TODO
