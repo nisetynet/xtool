@@ -14,3 +14,4 @@ build_linux
 build_windows
 
 meson_build
+copy.sh
