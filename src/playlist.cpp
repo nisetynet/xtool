@@ -7,8 +7,10 @@
 #include <random>
 #include <stdexcept>
 
-Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
-  toml::parse_result result = toml::parse_file(playlist_config_toml_file_path);
+Playlist::Playlist(
+    std::filesystem::path const &playlist_config_toml_file_path) {
+  toml::parse_result result =
+      toml::parse_file(playlist_config_toml_file_path.string());
   if (!result.is_table()) {
     throw std::runtime_error("Invalid toml file, expected table element.");
   }
@@ -137,11 +139,13 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
             "Invalid loop offsets: begin={}, end={}", loop_begin, loop_end));
       }
 
-      entry = {music_unique_id_value, music_file_path_value,
+      entry = {static_cast<UniqueMusicID>(music_unique_id_value),
+               music_file_path_value,
                std::make_pair(music_start_offset_value, music_end_offset_value),
                std::make_pair(loop_begin, loop_end)};
     } else {
-      entry = {music_unique_id_value, music_file_path_value,
+      entry = {static_cast<UniqueMusicID>(music_unique_id_value),
+               music_file_path_value,
                std::make_pair(music_start_offset_value, music_end_offset_value),
                std::nullopt};
     }
@@ -269,6 +273,16 @@ Playlist::random_music_for(BrawlMusicID const music_id) {
   return entry;
 
   // entries
+}
+
+std::unordered_map<UniqueMusicID, MusicEntry> const &
+Playlist::music_map() const noexcept {
+  return m_music_map;
+}
+
+std::unordered_map<BrawlMusicID, std::vector<UniqueMusicID>> const &
+Playlist::brawl_music_id_to_unique_ids_map() const noexcept {
+  return m_brawl_music_id_to_unique_ids_map;
 }
 
 // メモ:

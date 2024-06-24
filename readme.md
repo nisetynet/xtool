@@ -50,6 +50,5 @@ See https://nisety.net/posts/2023/12/27/dolphin-emulator-brawl-custom-musics/#%E
     * Replace std::osyncstream(std::cout) with spdlog.  
     * Added meson build file.
     * Trivial refactor.
-    - [] Playlist analysis(find unused musics), maybe use boost po to provide cli
-    - [] customize spdlog logger style, show thread
-    - [] audio volume normalizer
+    * Better log format.
+    * Added Playlist inspection command.(`xtool --inspect`)

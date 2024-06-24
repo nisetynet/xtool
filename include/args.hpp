@@ -19,7 +19,7 @@ public:
   virtual const char *what() const noexcept override {
     auto const what = boost::program_options::validation_error::what();
 
-    m_message = fmt::format("{}, got {}, detail: {}", what,
+    m_message = fmt::format("{}, got '{}', detail: {}", what,
                             this->m_substitutions.at("original_token"),
                             m_custom_message);
     return m_message.c_str();

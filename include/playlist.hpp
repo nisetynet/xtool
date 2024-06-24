@@ -22,9 +22,15 @@ struct MusicEntry {
 
 struct Playlist {
 public:
-  Playlist(std::string_view const playlist_config_toml_file_path);
+  Playlist(std::filesystem::path const &playlist_config_toml_file_path);
 
   std::optional<MusicEntry> random_music_for(BrawlMusicID const brawl_music_id);
+
+public:
+  std::unordered_map<UniqueMusicID, MusicEntry> const &
+  music_map() const noexcept;
+  std::unordered_map<BrawlMusicID, std::vector<UniqueMusicID>> const &
+  brawl_music_id_to_unique_ids_map() const noexcept;
 
 private:
   // unique music id to music entry

@@ -12,6 +12,14 @@ boost::program_options::variables_map parse_program_options(int const argc,
       // clang-format off
   ("version,v", "print version string")
   ("help", "produce help message")
+  ("config,c",boost::program_options::value<std::string>()->default_value("./config.toml")->notifier([](std::string_view const config_file_path){
+std::filesystem::path path(config_file_path);
+  if(!std::filesystem::is_regular_file(path)){
+    throw invalid_option_error_with_msg(
+                  "config", config_file_path,
+                  "does not exist or not file");
+  }
+  })->required(), "config file to use")
   ("inspect", "inspect config entries(musics, playlists)");
   // clang-format on
 

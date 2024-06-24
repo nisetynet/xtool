@@ -8,6 +8,7 @@
 #include <args.hpp>
 #include <atomic>
 #include <cassert>
+#include <inspection.hpp>
 #include <iostream>
 #include <music_player.hpp>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -45,13 +46,9 @@ void print_dolphin_status(DolphinComm::DolphinAccessor const &dolphin) {
   spdlog::info("dolphin status: {}", s);
 }
 
-void music_player_thread_main() {
+void music_player_thread_main(Playlist &&playlist) {
   try {
     // initialize system
-    spdlog::info("Loading playlist from config file...");
-
-    auto playlist = Playlist("./config.toml");
-    spdlog::info("Loaded playlist successfully.");
 
     spdlog::info("Initialize music player.");
     auto music_player = MusicPlayer();
@@ -113,14 +110,25 @@ int main(int argc, char **argv) {
           std::chrono::duration(std::chrono::milliseconds(msec)));
     };
 
-    auto const vm = parse_program_options(argc, argv);
-
     auto logger = spdlog::stdout_color_mt("xtool-logger");
     spdlog::set_default_logger(logger);
     // spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %T.%f] [%^%l%$] [thread %t] %v");
 
-    spdlog::info("xtool launched.");
+    auto const vm = parse_program_options(argc, argv);
+    auto const config_file_path =
+        std::filesystem::path(vm["config"].as<std::string>());
+
+    spdlog::info("xtool launched");
+
+    spdlog::info("Load config file '{}'", config_file_path.string());
+    Playlist pl(config_file_path);
+    spdlog::info("Loaded config file successfully.");
+
+    if (vm.count("inspect")) {
+      inspect_config(pl);
+      return EXIT_SUCCESS;
+    }
 
     auto dolphin = DolphinComm::DolphinAccessor{};
     dolphin.init();
@@ -143,7 +151,8 @@ int main(int argc, char **argv) {
 
     spdlog::info("dolphin process hooked! (pid={:#x})", dolphin.getPID());
 
-    auto music_player_thread = std::thread(music_player_thread_main);
+    auto music_player_thread =
+        std::thread(music_player_thread_main, std::move(pl));
 
     while (true) {
       auto const is_game_running =
