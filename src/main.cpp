@@ -47,7 +47,7 @@ void music_player_thread_main() {
     spdlog::info("Loading playlist from config file...");
 
     auto music_player = MusicPlayer();
-    std::osyncstream(std::cout) << "[+] Loaded playlist successfully!\n";
+    spdlog::info("Loaded playlist successfully!");
 
     std::uint16_t current_music_id{0xffff};
     std::optional<music_entry> current_music_entry = std::nullopt;
@@ -61,14 +61,12 @@ void music_player_thread_main() {
 #endif
 
       if (music_id != current_music_id) {
-        std::osyncstream(std::cout)
-            << fmt::format("[+] Music change detected: {:#x} -> {:#x}\n",
-                           current_music_id, music_id);
+        spdlog::info("Music change detected: {:#x} -> {:#x}", current_music_id,
+                     music_id);
         current_music_id = music_id;
 
         if (IGNORE_MUSIC_ID_SET.contains(current_music_id)) {
-          std::osyncstream(std::cout)
-              << fmt::format("[+] Ignore music id {:#x}\n", current_music_id);
+          spdlog::info("Ignore music id {:#x}", current_music_id);
           continue;
         }
 
@@ -76,8 +74,7 @@ void music_player_thread_main() {
 
         auto const music_entry_opt = playlist.random_music_for(music_id);
         if (!music_entry_opt.has_value()) {
-          std::osyncstream(std::cout) << fmt::format(
-              "[!] No music entry found for music id {:#x}.\n", music_id);
+          spdlog::warn("No music entry found for music id {:#x}.", music_id);
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
           continue;
         }
@@ -86,7 +83,7 @@ void music_player_thread_main() {
         current_music_entry = music_entry;
 
         if (!music_player.play(music_entry)) {
-          std::osyncstream(std::cout) << "[!] Failed to play music.";
+          spdlog::error("Failed to play music.");
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
           continue;
         }
@@ -95,7 +92,7 @@ void music_player_thread_main() {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   } catch (std::exception const &e) {
-    std::osyncstream(std::cout) << fmt::format("[!] Exception: {}\n", e.what());
+    spdlog::error("Exception: {}", e.what());
   }
 }
 
@@ -105,14 +102,14 @@ int main() {
     std::this_thread::sleep_for(
         std::chrono::duration(std::chrono::milliseconds(msec)));
   };
-  std::osyncstream(std::cout) << "[+] xtool launched.\n";
+  spdlog::info("xtool launched.");
 
   auto dolphin = DolphinComm::DolphinAccessor{};
   dolphin.init();
 
   // try to find dolphin process
   while (true) {
-    std::osyncstream(std::cout) << "[+] Waiting for dolphin ...\n";
+    spdlog::info("Waiting for dolphin ...");
 
     dolphin.hook();
     auto const status = dolphin.getStatus();
@@ -126,8 +123,7 @@ int main() {
     sleep_fn(100);
   }
 
-  std::osyncstream(std::cout) << fmt::format(
-      "[+] dolphin process hooked! (pid={:#x})\n", dolphin.getPID());
+  spdlog::info("dolphin process hooked! (pid={:#x})", dolphin.getPID());
 
   auto music_player_thread = std::thread(music_player_thread_main);
 
@@ -142,22 +138,22 @@ int main() {
           dolphin.readFromRAM(CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
                               sizeof(std::uint16_t), false);
       if (!read) {
-        std::osyncstream(std::cout) << "[!] Failed to read current music id.\n";
+        spdlog::error("Failed to read current music id.");
 
         sleep_fn(10);
         continue;
       }
-      // std::osyncstream(std::cout) << fmt::format("[+] Current music id:
-      // {:#x}\n", music_id);
+      // spdlog::info("Current music id:
+      //  {:#x}", music_id);
 
       CURRENT_MUSIC_ID.store(music_id);
       sleep_fn(200);
       continue;
     }
 
-    std::osyncstream(std::cout) << "[!] Game is not running\n";
+    spdlog::warn("Game is not running.");
   }
   music_player_thread.join();
-  std::osyncstream(std::cout) << "[+] xtool exit.\n";
+  spdlog::info("xtool exit.");
   return EXIT_SUCCESS;
 }

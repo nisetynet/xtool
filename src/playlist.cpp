@@ -150,21 +150,20 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
 
     if (music_map.count(music_unique_id_value)) {
       throw std::runtime_error(fmt::format(
-          "Duplicated music entry for id {:#x}\n", music_unique_id_value));
+          "Duplicated music entry for id {:#x}", music_unique_id_value));
     }
 
     music_map[music_unique_id_value] = entry;
   });
   m_music_map = music_map;
 
-  std::osyncstream(std::cout)
-      << fmt::format("[+] Found {} musics!\n", m_music_map.size());
+  spdlog::info("Found {} musics!", m_music_map.size());
 
   // for debugging
   /*
   for (auto &[k, v] : m_music_map) {
-    std::osyncstream(std::cout)
-        << fmt::format("unique music id: {}, music file path: {}\n", k,
+   spdlog::info(
+        << fmt::format("unique music id: {}, music file path: {}", k,
                        std::get<1>(v).string().c_str());
   }
   */
@@ -177,8 +176,7 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
     if (entry.first.str() == "musics") {
       continue;
     }
-    std::osyncstream(std::cout)
-        << fmt::format("[+] Found playlist: {}\n", entry.first.str());
+    spdlog::info("Found playlist: {}", entry.first.str());
     auto const &node = entry.second;
 
     if (!node.is_table()) {
@@ -188,8 +186,8 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
     auto const playlist_table = node.as_table();
     assert(playlist_table);
 
-    std::osyncstream(std::cout) << fmt::format(
-        "[+] Reading unique music ids for table: {}\n", entry.first.str());
+    spdlog::info("Reading unique music ids for table: {}",
+                 entry.first.str());
     auto unique_music_ids = std::vector<std::uint64_t>{};
 
     auto const musics = playlist_table->get("musics");
@@ -210,8 +208,7 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
       unique_music_ids.push_back(unique_music_id);
     });
 
-    std::osyncstream(std::cout) << fmt::format(
-        "[+] Reading target ids for table: {}\n", entry.first.str());
+    spdlog::info("Reading target ids for table: {}", entry.first.str());
 
     auto const target_ids = playlist_table->get("target_ids");
     if (!target_ids) {
@@ -231,13 +228,12 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
 
       if (brawl_music_id_to_unique_ids_map.count(target_id)) {
         throw std::runtime_error(
-            fmt::format("Duplicated target id: {:#x}\n", target_id));
+            fmt::format("Duplicated target id: {:#x}", target_id));
       }
       brawl_music_id_to_unique_ids_map[target_id] = unique_music_ids;
     });
 
-    std::osyncstream(std::cout) << fmt::format(
-        "[+] Loaded playlist {} successfully!\n", entry.first.str());
+    spdlog::info("Loaded playlist {} successfully!", entry.first.str());
   }
   m_brawl_music_id_to_unique_ids_map = brawl_music_id_to_unique_ids_map;
 
@@ -245,8 +241,8 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
   /*
   for (auto [k, v] : m_brawl_music_id_to_unique_ids_map) {
     for (auto id : v) {
-      std::osyncstream(std::cout) << fmt::format(
-          "brawl music id: {:#x}, unique music id: {:#x}\n", k, id);
+     spdlog::info(
+          "brawl music id: {:#x}, unique music id: {:#x}", k, id);
     }
   }
   */
@@ -298,7 +294,7 @@ std::size_t time_seed_rand(std::size_t const l, std::size_t const r) {
 
   std::uint64_t constant = 0x5a5a5a5a5a5a5a5a;
   std::uint64_t const seed = minutes_since_epoch ^ constant;
-  
+
   // generate
   std::mt19937 rng(seed);
   std::uniform_int_distribution<std::size_t> dist(l, r);

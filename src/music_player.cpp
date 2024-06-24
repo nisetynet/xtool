@@ -38,8 +38,7 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   config.dataCallback = data_callback;
   config.noPreSilencedOutputBuffer = MA_TRUE; // optimize
   if (ma_device_init(NULL, &config, &m_ma_device) != MA_SUCCESS) {
-    std::osyncstream(std::cout)
-        << "[!] Failed to initialize miniaudio device.\n";
+    spdlog::error("Failed to initialize miniaudio device.");
     return false;
   }
 
@@ -53,13 +52,13 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   auto result2 = ma_data_source_get_length_in_pcm_frames(
       &m_ma_decoder, &music_length_in_pcm_frames);
   if (result != MA_SUCCESS || result2 != MA_SUCCESS) {
-    std::osyncstream(std::cout) << "[!] Failed to get music length.\n ";
+    spdlog::error("Failed to get music length.");
     return false;
   }
 
   // set looping flag
   if (ma_data_source_set_looping(&m_ma_decoder, true) != MA_SUCCESS) {
-    std::osyncstream(std::cout) << "[!] Failed to set looping flag.\n";
+    spdlog::error("Failed to set looping flag.");
     return false;
   }
 
@@ -67,15 +66,13 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   if (std::get<3>(music_entry).has_value()) {
     auto const &loop_points = std::get<3>(music_entry).value();
 
-    std::osyncstream(std::cout)
-        << fmt::format("[+] Loop information: start={}, end={}.\n",
-                       loop_points.first, loop_points.second);
+    spdlog::info("Loop information: start={}, end={}.", loop_points.first,
+                 loop_points.second);
 
     if (ma_data_source_set_loop_point_in_pcm_frames(
             &m_ma_decoder, loop_points.first, loop_points.second) !=
         MA_SUCCESS) {
-      std::osyncstream(std::cout)
-          << "[!] Failed to set loop points to data source.\n ";
+      spdlog::error("Failed to set loop points to data source.");
       return false;
     }
     // ma_sound_set_stop_time_in_pcm_frames(&sound, loop_points.second);
@@ -97,30 +94,29 @@ bool MusicPlayer::play(music_entry const &music_entry) {
 
   if (play_end_offset <= play_start_offset) {
 
-    std::osyncstream(std::cout) << fmt ::format(
-        "[!] Invalid music start&end offsets for music entry id {}\n",
-        std::get<0>(music_entry));
+    spdlog::error("Invalid music start & end offsets(end offset <= start "
+                  "offset) for music entry id {}.",
+                  std::get<0>(music_entry));
     return false;
   }
 
-  std::osyncstream(std::cout)
-      << fmt::format("[+] PCM frame range: start={}, end={}.\n",
-                     play_start_offset, play_end_offset);
+  spdlog::info("PCM frame range: start={}, end={}.", play_start_offset,
+               play_end_offset);
+
   if (ma_data_source_set_range_in_pcm_frames(&m_ma_decoder, play_start_offset,
                                              play_end_offset) != MA_SUCCESS) {
-    std::osyncstream(std::cout)
-        << "[!] Failed to set pcm frame range to data source.\n";
+    spdlog::error("Failed to set pcm frame range to data source.");
     return false;
   }
 
   if (ma_device_start(&m_ma_device) != MA_SUCCESS) {
-    std::osyncstream(std::cout) << "[!] Failed to start device.\n";
+    spdlog::error("Failed to start device.");
     return false;
   }
 
-  std::osyncstream(std::cout) << fmt::format(
-      "[+] Playing music: {}, length: {} seconds({} pcm frames)\nsample "
-      "rate: {}, channels: {}, looping: {}, unique music id: {}\n",
+  spdlog::info(
+      "Playing music: {}, length: {} seconds({} pcm frames)\nsample "
+      "rate: {}, channels: {}, looping: {}, unique music id: {}",
       file_path.string().c_str(), music_length_in_sec,
       music_length_in_pcm_frames, config.sampleRate, config.playback.channels,
       [&]() {
