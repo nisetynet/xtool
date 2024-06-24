@@ -43,3 +43,13 @@ TODO
 ## ⚠️
 Some features are broken.  
 See https://nisety.net/posts/2023/12/27/dolphin-emulator-brawl-custom-musics/#%E5%95%8F%E9%A1%8C%E7%82%B9%E7%AD%89 for details.
+
+## Changelog
+* 2024-06-25  
+    * Better(?) rand seed.
+    * Replace std::osyncstream(std::cout) with spdlog.  
+    * Added meson build file.
+    * Trivial refactor.
+    - [] Playlist analysis(find unused musics), maybe use boost po to provide cli
+    - [] customize spdlog logger style, show thread
+    - [] audio volume normalizer

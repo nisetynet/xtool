@@ -40,6 +40,7 @@ include_dir = include_directories('include')
 
 xtool_sources=[
     'src/main.cpp',
+    'src/args.cpp',
     'src/playlist.cpp',
     'src/music_player.cpp',
     'include/dme/DolphinProcess/Linux/LinuxDolphinProcess.cpp',

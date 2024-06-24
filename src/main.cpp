@@ -1,17 +1,21 @@
 #include "playlist.hpp"
+#include <cstdlib>
+#include <spdlog/common.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
+#include <args.hpp>
 #include <atomic>
 #include <cassert>
 #include <iostream>
 #include <music_player.hpp>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <syncstream>
 #include <thread>
 #include <unordered_set>
 #include <xtool.hpp>
-
 #ifdef _WIN32
 #include <winsock.h>
 #else
@@ -101,64 +105,81 @@ void music_player_thread_main() {
   }
 }
 
-int main() {
+int main(int argc, char **argv) {
 
-  auto sleep_fn = [](int const msec) {
-    std::this_thread::sleep_for(
-        std::chrono::duration(std::chrono::milliseconds(msec)));
-  };
-  spdlog::info("xtool launched.");
+  try {
+    auto sleep_fn = [](int const msec) {
+      std::this_thread::sleep_for(
+          std::chrono::duration(std::chrono::milliseconds(msec)));
+    };
 
-  auto dolphin = DolphinComm::DolphinAccessor{};
-  dolphin.init();
+    auto const vm = parse_program_options(argc, argv);
 
-  // try to find dolphin process
-  while (true) {
-    spdlog::info("Waiting for dolphin ...");
+    auto logger = spdlog::stdout_color_mt("xtool-logger");
+    spdlog::set_default_logger(logger);
+    // spdlog::set_level(spdlog::level::debug);
+    spdlog::set_pattern("[%Y-%m-%d %T.%f] [%^%l%$] [thread %t] %v");
 
-    dolphin.hook();
-    auto const status = dolphin.getStatus();
+    spdlog::info("xtool launched.");
 
-    print_dolphin_status(dolphin);
+    auto dolphin = DolphinComm::DolphinAccessor{};
+    dolphin.init();
 
-    if (status == DolphinComm::DolphinStatus::hooked) {
-      break;
+    // try to find dolphin process
+    while (true) {
+      spdlog::info("Waiting for dolphin ...");
+
+      dolphin.hook();
+      auto const status = dolphin.getStatus();
+
+      print_dolphin_status(dolphin);
+
+      if (status == DolphinComm::DolphinStatus::hooked) {
+        break;
+      }
+
+      sleep_fn(100);
     }
 
-    sleep_fn(100);
-  }
+    spdlog::info("dolphin process hooked! (pid={:#x})", dolphin.getPID());
 
-  spdlog::info("dolphin process hooked! (pid={:#x})", dolphin.getPID());
+    auto music_player_thread = std::thread(music_player_thread_main);
 
-  auto music_player_thread = std::thread(music_player_thread_main);
+    while (true) {
+      auto const is_game_running =
+          (dolphin.getStatus() == DolphinComm::DolphinStatus::hooked);
+      if (is_game_running) {
+        // read emulator memory
+        std::uint16_t music_id;
+        // assert(dolphin.isValidConsoleAddress(CURRENT_MUSIC_ID_ADDRESS));
+        auto const read =
+            dolphin.readFromRAM(CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
+                                sizeof(std::uint16_t), false);
+        if (!read) {
+          spdlog::error("Failed to read current music id.");
 
-  while (true) {
-    auto const is_game_running =
-        (dolphin.getStatus() == DolphinComm::DolphinStatus::hooked);
-    if (is_game_running) {
-      // read emulator memory
-      std::uint16_t music_id;
-      // assert(dolphin.isValidConsoleAddress(CURRENT_MUSIC_ID_ADDRESS));
-      auto const read =
-          dolphin.readFromRAM(CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
-                              sizeof(std::uint16_t), false);
-      if (!read) {
-        spdlog::error("Failed to read current music id.");
+          sleep_fn(10);
+          continue;
+        }
+        // spdlog::info("Current music id:
+        //  {:#x}", music_id);
 
-        sleep_fn(10);
+        CURRENT_MUSIC_ID.store(music_id);
+        sleep_fn(200);
         continue;
       }
-      // spdlog::info("Current music id:
-      //  {:#x}", music_id);
 
-      CURRENT_MUSIC_ID.store(music_id);
-      sleep_fn(200);
-      continue;
+      spdlog::warn("Game is not running.");
     }
-
-    spdlog::warn("Game is not running.");
+    music_player_thread.join();
+    spdlog::info("xtool exit.");
+    return EXIT_SUCCESS;
+  } catch (boost::program_options::error &e) {
+    spdlog::error("Invalid argument: {}", e.what());
+    return EXIT_FAILURE;
+  } catch (std::exception const &e) {
+    spdlog::error("Exception: {}", e.what());
+    return EXIT_FAILURE;
   }
-  music_player_thread.join();
-  spdlog::info("xtool exit.");
-  return EXIT_SUCCESS;
+  return EXIT_FAILURE;
 }

@@ -115,8 +115,8 @@ bool MusicPlayer::play(MusicEntry const &music_entry) {
   }
 
   spdlog::info(
-      "Playing music: {}, length: {} seconds({} pcm frames)\nsample "
-      "rate: {}, channels: {}, looping: {}, unique music id: {}",
+      "\033[31;1;4mPlaying music: {}, length: {} seconds({} pcm frames)\nsample "
+      "rate: {}, channels: {}, looping: {}, unique music id: {}\033[0m",
       music_entry.music_file_path.string().c_str(), music_length_in_sec,
       music_length_in_pcm_frames, config.sampleRate, config.playback.channels,
       [&]() {
