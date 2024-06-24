@@ -186,8 +186,7 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
     auto const playlist_table = node.as_table();
     assert(playlist_table);
 
-    spdlog::info("Reading unique music ids for table: {}",
-                 entry.first.str());
+    spdlog::info("Reading unique music ids for table: {}", entry.first.str());
     auto unique_music_ids = std::vector<std::uint64_t>{};
 
     auto const musics = playlist_table->get("musics");
@@ -292,8 +291,11 @@ std::size_t time_seed_rand(std::size_t const l, std::size_t const r) {
 
   int minutes_since_epoch = (now / 60);
 
-  std::uint64_t constant = 0x5a5a5a5a5a5a5a5a;
-  std::uint64_t const seed = minutes_since_epoch ^ constant;
+  std::uint32_t constexpr constant = 0x0a5a5a5a;
+  std::uint32_t const seed = minutes_since_epoch ^ constant;
+
+  spdlog::info("seed {:#x} = minutes_since_epoch({:#x}) ^ {:#x}", seed,
+               minutes_since_epoch, constant);
 
   // generate
   std::mt19937 rng(seed);

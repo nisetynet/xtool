@@ -42,15 +42,19 @@ void print_dolphin_status(DolphinComm::DolphinAccessor const &dolphin) {
 
 void music_player_thread_main() {
   try {
-    auto playlist = Playlist("./config.toml");
     // initialize system
     spdlog::info("Loading playlist from config file...");
 
+    auto playlist = Playlist("./config.toml");
+    spdlog::info("Loaded playlist successfully.");
+
+    spdlog::info("Initialize music player.");
     auto music_player = MusicPlayer();
-    spdlog::info("Loaded playlist successfully!");
+    spdlog::info("Initialized music player successfully.");
 
     std::uint16_t current_music_id{0xffff};
     std::optional<music_entry> current_music_entry = std::nullopt;
+    
     while (true) {
       std::uint16_t const music_id =
 #ifdef _WIN32
