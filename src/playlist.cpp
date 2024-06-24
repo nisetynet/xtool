@@ -1,11 +1,16 @@
 #include <cassert>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <playlist.hpp>
+#include <random>
+#include <stdexcept>
 
 Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
   toml::parse_result result = toml::parse_file(playlist_config_toml_file_path);
   if (!result.is_table()) {
-    exit(-1);
+    throw std::runtime_error("Invalid toml file, expected table element.");
   }
   auto table = (toml::table)(result);
 
@@ -103,8 +108,8 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
     }
 
     if (!std::filesystem::is_regular_file(music_file_path_value)) {
-      throw std::runtime_error(
-          fmt::format("{} is not a music file!", music_file_path_value.string()));
+      throw std::runtime_error(fmt::format("{} is not a music file!",
+                                           music_file_path_value.string()));
     }
 
     auto const music_start_offset_value =
@@ -245,8 +250,6 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
     }
   }
   */
-
-  this->init_mt();
 }
 
 std::optional<music_entry>
@@ -262,9 +265,8 @@ Playlist::random_music_for(std::uint16_t const music_id) {
   }
   // choose one randomly
 
-  std::uniform_int_distribution<> dist(0, unique_music_ids.size() - 1);
-
-  auto const unique_music_id = unique_music_ids[dist(m_mt)];
+  auto const random_index = time_seed_rand(0, unique_music_ids.size() - 1);
+  auto const unique_music_id = unique_music_ids[random_index];
 
   if (!m_music_map.count(unique_music_id)) {
     return std::nullopt;
@@ -276,18 +278,30 @@ Playlist::random_music_for(std::uint16_t const music_id) {
   // entries
 }
 
-void Playlist::init_mt() {
-  // seed mt with current time
-  std::time_t t = std::time(0); // get time now
-  std::tm *now = std::gmtime(&t);
-  std::vector<int> buf{};
-  buf.push_back(now->tm_year);
-  buf.push_back(now->tm_mon);
-  buf.push_back(now->tm_mday);
-  buf.push_back(now->tm_hour);
+// メモ:
+// ネットプレイで途中からツールを起動した人(クライアント)も同期できるように、毎回現在時刻でシードを生成して乱数を一度だけ生成してシードやdistributionは使い回さない
+std::size_t time_seed_rand(std::size_t const l, std::size_t const r) {
+  assert(l <= r);
+  // seed
+  // auto now = std::chrono::utc_clock::now();
+  // auto duration = now.time_since_epoch();
+  // std::uint64_t minutes =
+  //     std::chrono::duration_cast<std::chrono::minutes>(duration).count();
 
-  auto seed = std::seed_seq(buf.begin(), buf.end());
-  std::mt19937 mt(seed);
+  std::time_t now = std::time(nullptr);
 
-  m_mt = mt;
+  if (std::gmtime(&now) == nullptr) {
+    std::runtime_error("Failed to convert std::time_t to UTC");
+  }
+
+  int minutes_since_epoch = (now / 60);
+
+  std::uint64_t constant = 0x5a5a5a5a5a5a5a5a;
+  std::uint64_t const seed = minutes_since_epoch ^ constant;
+  
+  // generate
+  std::mt19937 rng(seed);
+  std::uniform_int_distribution<std::size_t> dist(l, r);
+  std::size_t v = dist(rng);
+  return v;
 }

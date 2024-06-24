@@ -5,3 +5,12 @@ xtool_*/
 b/
 xtool_*.tar.gz
 todo.md
+
+# meson wrap pulled contents
+subprojects/*/
+
+.cache
+build_linux
+build_windows
+
+meson_build

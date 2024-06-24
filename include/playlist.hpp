@@ -7,6 +7,7 @@
 #include <toml.hpp>
 #include <unordered_map>
 #include <unordered_set>
+#include <spdlog/spdlog.h>
 
 using music_entry =
     std::tuple<std::uint64_t, std::filesystem::path,
@@ -20,11 +21,6 @@ public:
   std::optional<music_entry> random_music_for(std::uint16_t const music_id);
 
 private:
-  void init_mt();
-
-private:
-  std::mt19937 m_mt;
-
   // unique music id to music entry
   std::unordered_map<std::uint64_t, music_entry> m_music_map;
 
@@ -32,3 +28,5 @@ private:
   std::unordered_map<std::uint16_t, std::vector<std::uint64_t>>
       m_brawl_music_id_to_unique_ids_map;
 };
+
+std::size_t time_seed_rand(std::size_t const l, std::size_t const r);

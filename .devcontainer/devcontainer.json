@@ -1,0 +1,13 @@
+{
+    "name": "xtool-dev",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "dev",
+    "workspaceFolder": "/xtool",
+    // "forwardPorts": [3000],
+    "customizations": {
+      "vscode": {
+         // https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd
+        "extensions": ["llvm-vs-code-extensions.vscode-clangd"]
+      }
+    }
+  }

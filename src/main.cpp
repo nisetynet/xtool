@@ -5,6 +5,7 @@
 #include <cassert>
 #include <iostream>
 #include <music_player.hpp>
+#include <spdlog/spdlog.h>
 #include <syncstream>
 #include <thread>
 #include <unordered_set>
@@ -36,14 +37,14 @@ void print_dolphin_status(DolphinComm::DolphinAccessor const &dolphin) {
     s = "un hooked";
   }
 
-  std::osyncstream(std::cout) << fmt::format("[+] dolphin status: {}\n", s);
+  spdlog::info("dolphin status: {}", s);
 }
 
 void music_player_thread_main() {
   try {
     auto playlist = Playlist("./config.toml");
     // initialize system
-    std::osyncstream(std::cout) << "[+] Loading playlist from config file...\n";
+    spdlog::info("Loading playlist from config file...");
 
     auto music_player = MusicPlayer();
     std::osyncstream(std::cout) << "[+] Loaded playlist successfully!\n";
