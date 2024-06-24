@@ -1,3 +1,4 @@
+#include "playlist.hpp"
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
@@ -53,8 +54,8 @@ void music_player_thread_main() {
     spdlog::info("Initialized music player successfully.");
 
     std::uint16_t current_music_id{0xffff};
-    std::optional<music_entry> current_music_entry = std::nullopt;
-    
+    std::optional<MusicEntry> current_music_entry = std::nullopt;
+
     while (true) {
       std::uint16_t const music_id =
 #ifdef _WIN32

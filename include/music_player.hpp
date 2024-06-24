@@ -9,7 +9,7 @@ public:
   // MusicPlayer() = delete;
   MusicPlayer();
   ~MusicPlayer();
-  [[nodiscard]] bool play(music_entry const &music_entry);
+  [[nodiscard]] bool play(MusicEntry const &music_entry);
 
 private:
   [[nodiscard]] bool stop();

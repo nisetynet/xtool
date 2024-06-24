@@ -15,8 +15,8 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
   auto table = (toml::table)(result);
 
   // construct map
-  std::unordered_map<std::uint64_t, music_entry> music_map{};
-  std::unordered_map<std::uint16_t, std::vector<std::uint64_t>>
+  std::unordered_map<UniqueMusicID, MusicEntry> music_map{};
+  std::unordered_map<std::uint16_t, std::vector<UniqueMusicID>>
       music_id_music_map_key_map{};
 
   auto musics = table["musics"]["musics"];
@@ -128,7 +128,7 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
       }
     }
 
-    music_entry entry;
+    MusicEntry entry;
     if (is_loop_begin_offset_available && is_loop_end_offset_available) {
       auto const loop_begin = loop_begin_offset->as_integer()->get();
       auto const loop_end = loop_end_offset->as_integer()->get();
@@ -137,15 +137,13 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
             "Invalid loop offsets: begin={}, end={}", loop_begin, loop_end));
       }
 
-      entry = std::make_tuple(
-          music_unique_id_value, music_file_path_value,
-          std::make_pair(music_start_offset_value, music_end_offset_value),
-          std::make_pair(loop_begin, loop_end));
+      entry = {music_unique_id_value, music_file_path_value,
+               std::make_pair(music_start_offset_value, music_end_offset_value),
+               std::make_pair(loop_begin, loop_end)};
     } else {
-      entry = std::make_tuple(
-          music_unique_id_value, music_file_path_value,
-          std::make_pair(music_start_offset_value, music_end_offset_value),
-          std::nullopt);
+      entry = {music_unique_id_value, music_file_path_value,
+               std::make_pair(music_start_offset_value, music_end_offset_value),
+               std::nullopt};
     }
 
     if (music_map.count(music_unique_id_value)) {
@@ -168,7 +166,7 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
   }
   */
 
-  std::unordered_map<std::uint16_t, std::vector<std::uint64_t>>
+  std::unordered_map<BrawlMusicID, std::vector<UniqueMusicID>>
       brawl_music_id_to_unique_ids_map{};
 
   // read other tables
@@ -247,8 +245,8 @@ Playlist::Playlist(std::string_view const playlist_config_toml_file_path) {
   */
 }
 
-std::optional<music_entry>
-Playlist::random_music_for(std::uint16_t const music_id) {
+std::optional<MusicEntry>
+Playlist::random_music_for(BrawlMusicID const music_id) {
   if (!m_brawl_music_id_to_unique_ids_map.count(music_id)) {
     return std::nullopt;
   }

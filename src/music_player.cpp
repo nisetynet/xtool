@@ -1,3 +1,4 @@
+#include "playlist.hpp"
 #include <music_player.hpp>
 
 void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
@@ -18,14 +19,13 @@ MusicPlayer::MusicPlayer() {}
 
 MusicPlayer::~MusicPlayer() { auto _ = this->stop(); }
 
-bool MusicPlayer::play(music_entry const &music_entry) {
+bool MusicPlayer::play(MusicEntry const &music_entry) {
   if (!this->stop()) {
     return false;
   }
 
-  auto const &file_path = std::get<1>(music_entry);
-  if (ma_decoder_init_file(file_path.string().c_str(), NULL, &m_ma_decoder) !=
-      MA_SUCCESS) {
+  if (ma_decoder_init_file(music_entry.music_file_path.string().c_str(), NULL,
+                           &m_ma_decoder) != MA_SUCCESS) {
     return false;
   }
 
@@ -63,8 +63,9 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   }
 
   // set loop points if available
-  if (std::get<3>(music_entry).has_value()) {
-    auto const &loop_points = std::get<3>(music_entry).value();
+
+  if (music_entry.loop_start_end_offsets.has_value()) {
+    auto const loop_points = *music_entry.loop_start_end_offsets;
 
     spdlog::info("Loop information: start={}, end={}.", loop_points.first,
                  loop_points.second);
@@ -79,10 +80,9 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   }
 
   // set music start / end offsets
-  auto const &play_offsets = std::get<2>(music_entry);
 
-  auto play_start_offset = play_offsets.first;
-  auto play_end_offset = play_offsets.second;
+  auto play_start_offset = music_entry.start_end_offsets.first;
+  auto play_end_offset = music_entry.start_end_offsets.second;
 
   if (play_start_offset == -1) {
     play_start_offset = 0;
@@ -95,8 +95,8 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   if (play_end_offset <= play_start_offset) {
 
     spdlog::error("Invalid music start & end offsets(end offset <= start "
-                  "offset) for music entry id {}.",
-                  std::get<0>(music_entry));
+                  "offset) for music entry id {:#x}.",
+                  music_entry.unique_music_id);
     return false;
   }
 
@@ -117,7 +117,7 @@ bool MusicPlayer::play(music_entry const &music_entry) {
   spdlog::info(
       "Playing music: {}, length: {} seconds({} pcm frames)\nsample "
       "rate: {}, channels: {}, looping: {}, unique music id: {}",
-      file_path.string().c_str(), music_length_in_sec,
+      music_entry.music_file_path.string().c_str(), music_length_in_sec,
       music_length_in_pcm_frames, config.sampleRate, config.playback.channels,
       [&]() {
         if (ma_data_source_is_looping(&m_ma_decoder) == MA_TRUE) {
@@ -125,7 +125,7 @@ bool MusicPlayer::play(music_entry const &music_entry) {
         }
         return "no";
       }(),
-      std::get<0>(music_entry));
+      music_entry.unique_music_id);
   m_is_playing = true;
   return true;
 }
