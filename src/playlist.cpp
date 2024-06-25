@@ -209,6 +209,9 @@ Playlist::Playlist(
       unique_music_ids.push_back(unique_music_id);
     });
 
+    spdlog::info("Found {} musics for table: {}", unique_music_ids.size(),
+                 entry.first.str());
+
     spdlog::info("Reading target ids for table: {}", entry.first.str());
 
     auto const target_ids = playlist_table->get("target_ids");
@@ -250,7 +253,8 @@ Playlist::Playlist(
 }
 
 std::optional<MusicEntry>
-Playlist::random_music_for(BrawlMusicID const music_id) {
+Playlist::random_music_for(BrawlMusicID const music_id,
+                           std::uint32_t const seed) {
   if (!m_brawl_music_id_to_unique_ids_map.count(music_id)) {
     return std::nullopt;
   }
@@ -262,7 +266,8 @@ Playlist::random_music_for(BrawlMusicID const music_id) {
   }
   // choose one randomly
 
-  auto const random_index = time_seed_rand(0, unique_music_ids.size() - 1);
+  spdlog::info("Using seed {:#x}", seed);
+  auto const random_index = seed_rand(0, unique_music_ids.size() - 1, seed);
   auto const unique_music_id = unique_music_ids[random_index];
 
   if (!m_music_map.count(unique_music_id)) {
@@ -271,8 +276,6 @@ Playlist::random_music_for(BrawlMusicID const music_id) {
 
   auto entry = m_music_map[unique_music_id];
   return entry;
-
-  // entries
 }
 
 std::unordered_map<UniqueMusicID, MusicEntry> const &
@@ -287,30 +290,31 @@ Playlist::brawl_music_id_to_unique_ids_map() const noexcept {
 
 // メモ:
 // ネットプレイで途中からツールを起動した人(クライアント)も同期できるように、毎回現在時刻でシードを生成して乱数を一度だけ生成してシードやdistributionは使い回さない
-std::size_t time_seed_rand(std::size_t const l, std::size_t const r) {
+// 現在の実装ではadditional_seedにゲーム内のseedを拝借して利用している
+// ゲーム内のseedが更新されるタイミングを観察した限り、ギリクライアント間で同期したまま使えそうな感じがした
+std::size_t seed_rand(std::size_t const l, std::size_t const r,
+                      std::uint32_t const additional_seed) {
   assert(l <= r);
   // seed
-  // auto now = std::chrono::utc_clock::now();
-  // auto duration = now.time_since_epoch();
-  // std::uint64_t minutes =
-  //     std::chrono::duration_cast<std::chrono::minutes>(duration).count();
+  /*
+  Old time based seed code
+  bad rand quality
+    std::time_t now = std::time(nullptr);
 
-  std::time_t now = std::time(nullptr);
+    auto const tm = std::gmtime(&now);
+    if (!tm) {
+      throw std::runtime_error("Failed to convert std::time_t to UTC");
+    }
 
-  if (std::gmtime(&now) == nullptr) {
-    std::runtime_error("Failed to convert std::time_t to UTC");
-  }
+    int minutes_since_epoch = (now / 60);
 
-  int minutes_since_epoch = (now / 60);
+    std::uint32_t const seed = minutes_since_epoch ^ additional_seed;
 
-  std::uint32_t constexpr constant = 0x0a5a5a5a;
-  std::uint32_t const seed = minutes_since_epoch ^ constant;
-
-  spdlog::info("seed {:#x} = minutes_since_epoch({:#x}) ^ {:#x}", seed,
-               minutes_since_epoch, constant);
-
+    spdlog::info("seed {:#x} = minutes_since_epoch({:#x}) ^ {:#x}", seed,
+                 minutes_since_epoch, constant);
+  */
   // generate
-  std::mt19937 rng(seed);
+  std::mt19937 rng(additional_seed);
   std::uniform_int_distribution<std::size_t> dist(l, r);
   std::size_t v = dist(rng);
   return v;

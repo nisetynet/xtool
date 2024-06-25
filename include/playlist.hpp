@@ -24,7 +24,8 @@ struct Playlist {
 public:
   Playlist(std::filesystem::path const &playlist_config_toml_file_path);
 
-  std::optional<MusicEntry> random_music_for(BrawlMusicID const brawl_music_id);
+  std::optional<MusicEntry> random_music_for(BrawlMusicID const brawl_music_id,
+                                             std::uint32_t const seed);
 
 public:
   std::unordered_map<UniqueMusicID, MusicEntry> const &
@@ -41,4 +42,5 @@ private:
       m_brawl_music_id_to_unique_ids_map;
 };
 
-std::size_t time_seed_rand(std::size_t const l, std::size_t const r);
+std::size_t seed_rand(std::size_t const l, std::size_t const r,
+                           std::uint32_t const additional_seed);

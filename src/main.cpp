@@ -1,4 +1,5 @@
 #include "playlist.hpp"
+#include <cstdint>
 #include <cstdlib>
 #include <spdlog/common.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -24,9 +25,10 @@
 #endif
 
 std::atomic_uint16_t CURRENT_MUSIC_ID(0xffff); // 0xffff = no music
+std::atomic_uint32_t CURRENT_G_MTRAND_SEED(0x0);
 
 auto static constexpr CURRENT_MUSIC_ID_ADDRESS = 0x90e60f06 - 0x80000000;
-
+auto static constexpr G_MTRAND_SEED_ADDRESS = 0x805a00b8 + 0x4 - 0x80000000;
 static const std::unordered_set<std::uint16_t> IGNORE_MUSIC_ID_SET{0xffff,
                                                                    0xcccc, 0x0};
 
@@ -78,7 +80,10 @@ void music_player_thread_main(Playlist &&playlist) {
 
         // music changed in game, play
 
-        auto const music_entry_opt = playlist.random_music_for(music_id);
+        // retrive g_mtRand.seed value
+        std::uint32_t const seed = CURRENT_G_MTRAND_SEED.load();
+
+        auto const music_entry_opt = playlist.random_music_for(music_id, seed);
         if (!music_entry_opt.has_value()) {
           spdlog::warn("No music entry found for music id {:#x}.", music_id);
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -161,19 +166,32 @@ int main(int argc, char **argv) {
         // read emulator memory
         std::uint16_t music_id;
         // assert(dolphin.isValidConsoleAddress(CURRENT_MUSIC_ID_ADDRESS));
-        auto const read =
+        auto const read1 =
             dolphin.readFromRAM(CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
                                 sizeof(std::uint16_t), false);
-        if (!read) {
+
+        std::uint32_t seed;
+        static_assert(sizeof(std::uint32_t) == 0x4);
+        auto const read2 = dolphin.readFromRAM(G_MTRAND_SEED_ADDRESS,
+                                               (char *)(&seed), 0x4, false);
+
+        if (!read1) {
           spdlog::error("Failed to read current music id.");
 
           sleep_fn(10);
           continue;
         }
+        if (!read2) {
+          spdlog::error("Failed to read g_mtRand.seed.");
+          sleep_fn(10);
+          continue;
+        }
+
         // spdlog::info("Current music id:
         //  {:#x}", music_id);
 
         CURRENT_MUSIC_ID.store(music_id);
+        CURRENT_G_MTRAND_SEED.store(seed);
         sleep_fn(200);
         continue;
       }
