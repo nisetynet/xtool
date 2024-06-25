@@ -46,8 +46,8 @@ See https://nisety.net/posts/2023/12/27/dolphin-emulator-brawl-custom-musics/#%E
 
 ## Changelog
 * 2024-06-25  
-    * Better(?) rand seed.
-    * Replace std::osyncstream(std::cout) with spdlog.  
+    * Better rand seed(reads `g_mtRand.seed`).
+    * Replace std::osyncstream(std::cout) with spdlog.
     * Added meson build file.
     * Trivial refactor.
     * Better log format.
