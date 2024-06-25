@@ -128,8 +128,7 @@ bool MusicPlayer::play(MusicEntry const &music_entry) {
         return "no";
       }(),
       music_entry.unique_music_id);
-#endif
-
+#else
   spdlog::info(
       "Playing music: {}, length: {} seconds({} pcm frames)\nsample "
       "rate: {}, channels: {}, looping: {}, unique music id: {}",
@@ -142,6 +141,7 @@ bool MusicPlayer::play(MusicEntry const &music_entry) {
         return "no";
       }(),
       music_entry.unique_music_id);
+#endif
 
   m_is_playing = true;
   return true;
