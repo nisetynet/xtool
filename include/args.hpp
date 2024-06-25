@@ -2,6 +2,7 @@
 
 #include <boost/program_options.hpp>
 #include <string_view>
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 // supports custom error message

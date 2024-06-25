@@ -1,7 +1,8 @@
 project('xtool', 'cpp', default_options :{
     'cpp_std':'c++23',
-    'warning_level':'3', 
-    'werror':'false', 
+    'warning_level':'3',
+    'werror':'false',
+    'b_lto':'true',
    # 'cpp_args':'-DMA_NO_RUNTIME_LINKING',
     'default_library':'static'
 }) # https://mesonbuild.com/Builtin-options.html
@@ -18,6 +19,12 @@ endif
 if cpp_compiler.get_id() == 'clang'
 add_project_arguments('-Wlifetime', language : 'cpp')
 endif
+
+# msvc
+if cpp_compiler.get_id() == 'msvc'
+    winsock_dep = cpp_compiler.find_library('ws2_32', required: true)
+endif
+
 
 
 # dependencies
@@ -50,5 +57,8 @@ xtool_sources=[
     'include/dme/Common/MemoryCommon.cpp'
 ]
 
-executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [boost_dep,fmt_dep,spdlog_dep,tomlpp_dep])
-
+if cpp_compiler.get_id() == 'msvc'
+    executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [boost_dep,fmt_dep,spdlog_dep,tomlpp_dep,winsock_dep])
+else
+    executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [boost_dep,fmt_dep,spdlog_dep,tomlpp_dep])
+endif

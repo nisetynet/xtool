@@ -30,15 +30,13 @@ git clone --recursive https://github.com/nisetynet/xtool
 
 ### Linux
 In the source root directory, run
-```bash
-cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
-```
-Replace `clang++` with `g++` to build with g++.
+
 
 ### Windows
-In the source root directory, run
-```bash
-cmake -B build -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
+
+#### Boost
+```
+$env:BOOST_ROOT = "C:\path\to\Boost"
 ```
 
 ## Usage
