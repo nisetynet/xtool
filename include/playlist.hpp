@@ -6,7 +6,7 @@
 #include <random>
 #include <spdlog/spdlog.h>
 #include <syncstream>
-#include <toml.hpp>
+#include <toml++/toml.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
