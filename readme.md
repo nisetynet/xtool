@@ -16,7 +16,11 @@ Modified and directly included in the source.
 * miniaudio: https://github.com/mackron/miniaudio#license
 * toml++: https://marzer.github.io/tomlplusplus/
 ## How to build
-You need a C++ compiler and [cmake](https://cmake.org/download/) to build.
+Using meson now.  
+TODO: write instructions.
+TODO: remove cmake(test building on windows first)
+
+~~You need a C++ compiler and [cmake](https://cmake.org/download/) to build.~~
 
 First, clone the repository.
 
