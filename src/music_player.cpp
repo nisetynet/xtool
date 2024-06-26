@@ -17,7 +17,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput,
 
 MusicPlayer::MusicPlayer() {}
 
-MusicPlayer::~MusicPlayer() { auto _ = this->stop(); }
+MusicPlayer::~MusicPlayer() { [[maybe_unused]] auto ignore_ = this->stop(); }
 
 bool MusicPlayer::play(MusicEntry const &music_entry) {
   if (!this->stop()) {
@@ -84,11 +84,11 @@ bool MusicPlayer::play(MusicEntry const &music_entry) {
   auto play_start_offset = music_entry.start_end_offsets.first;
   auto play_end_offset = music_entry.start_end_offsets.second;
 
-  if (play_start_offset == -1) {
+  if (play_start_offset == static_cast<std::uint64_t>(-1)) {
     play_start_offset = 0;
   }
 
-  if (play_end_offset == -1) {
+  if (play_end_offset == static_cast<std::uint64_t>(-1)) {
     play_end_offset = music_length_in_pcm_frames;
   }
 
