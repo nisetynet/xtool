@@ -9,15 +9,18 @@
 #include <args.hpp>
 #include <atomic>
 #include <cassert>
+#include <constants.hpp>
 #include <inspection.hpp>
 #include <iostream>
 #include <music_player.hpp>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <syncstream>
+#include <test_seed.hpp>
 #include <thread>
 #include <unordered_set>
 #include <xtool.hpp>
+
 #ifdef _WIN32
 #include <winsock.h>
 #else
@@ -27,8 +30,6 @@
 std::atomic_uint16_t CURRENT_MUSIC_ID(0xffff); // 0xffff = no music
 std::atomic_uint32_t CURRENT_G_MTRAND_SEED(0x0);
 
-auto static constexpr CURRENT_MUSIC_ID_ADDRESS = 0x90e60f06 - 0x80000000;
-auto static constexpr G_MTRAND_SEED_ADDRESS = 0x805a00b8 + 0x4 - 0x80000000;
 static const std::unordered_set<std::uint16_t> IGNORE_MUSIC_ID_SET{0xffff,
                                                                    0xcccc, 0x0};
 
@@ -126,6 +127,11 @@ int main(int argc, char **argv) {
 
     spdlog::info("xtool launched");
 
+    if (vm.count("test_seed")) {
+      test_seed(0, 100, 1000);
+      return EXIT_SUCCESS;
+    }
+
     spdlog::info("Load config file '{}'", config_file_path.string());
     Playlist pl(config_file_path);
     spdlog::info("Loaded config file successfully.");
@@ -166,14 +172,15 @@ int main(int argc, char **argv) {
         // read emulator memory
         std::uint16_t music_id;
         // assert(dolphin.isValidConsoleAddress(CURRENT_MUSIC_ID_ADDRESS));
-        auto const read1 =
-            dolphin.readFromRAM(CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
-                                sizeof(std::uint16_t), false);
+        auto const read1 = dolphin.readFromRAM(
+            xtool::constants::CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
+            sizeof(std::uint16_t), false);
 
         std::uint32_t seed;
         static_assert(sizeof(std::uint32_t) == 0x4);
-        auto const read2 = dolphin.readFromRAM(G_MTRAND_SEED_ADDRESS,
-                                               (char *)(&seed), 0x4, false);
+        auto const read2 =
+            dolphin.readFromRAM(xtool::constants::G_MTRAND_SEED_ADDRESS,
+                                (char *)(&seed), 0x4, false);
 
         if (!read1) {
           spdlog::error("Failed to read current music id.");

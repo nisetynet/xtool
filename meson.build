@@ -51,6 +51,8 @@ xtool_sources=[
     'src/playlist.cpp',
     'src/music_player.cpp',
     'src/inspection.cpp',
+    'src/dolphin_manager.cpp',
+    'src/test_seed.cpp',
     'include/dme/DolphinProcess/Linux/LinuxDolphinProcess.cpp',
     'include/dme/DolphinProcess/Windows/WindowsDolphinProcess.cpp',
     'include/dme/DolphinProcess/DolphinAccessor.cpp',

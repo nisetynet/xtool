@@ -2,6 +2,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
+#include <unordered_set>
 
 boost::program_options::variables_map parse_program_options(int const argc,
                                                             char **const argv) {
@@ -20,7 +22,10 @@ std::filesystem::path path(config_file_path);
                   "does not exist or not file");
   }
   })->required(), "config file to use")
-  ("inspect", "inspect config entries(musics, playlists)");
+  ("inspect", "inspect config entries(musics, playlists)")
+  ("test_seed","test rand function and g_mtRand.seed")
+  ;
+
   // clang-format on
 
   // Hidden options, will be allowed both on command line and
@@ -36,6 +41,23 @@ std::filesystem::path path(config_file_path);
   boost::program_options::store(
       boost::program_options::parse_command_line(argc, argv, cmdline_options),
       vm);
+
+  // check duplication
+  [&vm](std::vector<std::string> const &commands) {
+    std::vector<std::string> supplied_commands;
+    supplied_commands.reserve(commands.size());
+
+    for (auto const &command : commands) {
+      if (vm.contains(command)) {
+        supplied_commands.push_back(command);
+      }
+    }
+    if (2 <= supplied_commands.size()) {
+      throw std::invalid_argument(fmt::format(
+          "Got {} commands({}), you can use only one command.",
+          supplied_commands.size(), fmt::join(supplied_commands, ", ")));
+    }
+  }({"help", "version", "inspect", "test_seed"});
 
   if (vm.count("help")) {
     std::cout << generic << std::endl;
