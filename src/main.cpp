@@ -190,13 +190,15 @@ int main(int argc, char **argv) {
   argparse::ArgumentParser sub_command_seedtest("seedtest");
   sub_command_seedtest.add_description(
       "Test random function with g_mtRand.seed.");
-  sub_command_seedtest.add_argument("dist range start")
-      .default_value(0)
+  sub_command_seedtest.add_argument("random distribution range start")
+      .default_value(std::uint32_t{0})
       .help("");
-  sub_command_seedtest.add_argument("dist range end")
-      .default_value(300)
+  sub_command_seedtest.add_argument("random distribution range end")
+      .default_value(std::uint32_t(300))
       .help("");
-  sub_command_seedtest.add_argument("count").default_value(3000).help("");
+  sub_command_seedtest.add_argument("count")
+      .default_value(std::uint32_t{3000})
+      .help("");
 
   program.add_subparser(sub_command_inspect);
   program.add_subparser(sub_command_seedtest);
@@ -224,9 +226,11 @@ int main(int argc, char **argv) {
     }
 
     if (program.is_subcommand_used(sub_command_seedtest)) {
-      auto const start = program.get<std::uint32_t>("dist range start");
-      auto const end = program.get<std::uint32_t>("dist range end");
-      auto const count = program.get<std::uint32_t>("count");
+      auto const start =
+          sub_command_seedtest.get<std::uint32_t>("random distribution range start");
+      auto const end =
+          sub_command_seedtest.get<std::uint32_t>("random distribution range end");
+      auto const count = sub_command_seedtest.get<std::uint32_t>("count");
       test_seed(start, end, count);
       return EXIT_SUCCESS;
     }

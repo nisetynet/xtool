@@ -268,6 +268,8 @@ Playlist::random_music_for_with_g_mtRand_seed(BrawlMusicID const music_id,
   // choose one randomly
 
   spdlog::info("Using seed {:#x}", seed);
+  spdlog::info("Found {} musics for brawl music id {:#x}.",
+               unique_music_ids.size(), music_id);
   auto const random_index = seed_rand(0, unique_music_ids.size() - 1, seed);
   auto const unique_music_id = unique_music_ids[random_index];
 
@@ -293,6 +295,9 @@ std::optional<MusicEntry> Playlist::random_music_for_with_std_random_device(
   }
   // choose one randomly
 
+  spdlog::warn("Using std::random_device.");
+  spdlog::info("Found {} musics for brawl music id {:#x}.",
+               unique_music_ids.size(), music_id);
   std::random_device rd;
   std::mt19937 rng(rd());
 
