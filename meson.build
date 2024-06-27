@@ -25,14 +25,18 @@ if cpp_compiler.get_id() == 'msvc'
     winsock_dep = cpp_compiler.find_library('ws2_32', required: true)
 endif
 
+if get_option('buildtype')=='debug'
+add_project_arguments('-DXTOOL_DEBUG', language : 'cpp')
+endif
+
+
 
 
 # dependencies
 # TODO: replace cpp_args -w with supress when https://github.com/mesonbuild/meson/issues/8636 is done
-# https://mesonbuild.com/Dependencies.html#boost
-boost_dep = dependency('boost',modules : ['program_options'],include_type:'system',default_options:{'warning_level':'0','cpp_args':'-w'}, required: true, static:true)  # without static:true, boost program_options not found
 
 
+argparse_dep= dependency('argparse',include_type:'system',default_options:{'warning_level':'0','cpp_args':'-w'},static:true)
 tomlpp_dep = dependency('tomlplusplus',include_type:'system',default_options:{'warning_level':'0','cpp_args':'-w'},static:true)
 
 fmt_dep = dependency('fmt',include_type:'system',default_options:{'warning_level':'0' ,'cpp_args':'-w'})
@@ -47,7 +51,6 @@ include_dir = include_directories('include')
 
 xtool_sources=[
     'src/main.cpp',
-    'src/args.cpp',
     'src/playlist.cpp',
     'src/music_player.cpp',
     'src/inspection.cpp',
@@ -60,7 +63,7 @@ xtool_sources=[
 ]
 
 if cpp_compiler.get_id() == 'msvc'
-    executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [boost_dep,fmt_dep,spdlog_dep,tomlpp_dep,winsock_dep])
+    executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [argparse_dep,fmt_dep,spdlog_dep,tomlpp_dep,winsock_dep])
 else
-    executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [boost_dep,fmt_dep,spdlog_dep,tomlpp_dep])
+    executable('xtool',xtool_sources, include_directories:include_dir,dependencies : [argparse_dep,fmt_dep,spdlog_dep,tomlpp_dep])
 endif

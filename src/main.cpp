@@ -1,4 +1,6 @@
+#include "dolphin_manager.hpp"
 #include "playlist.hpp"
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <spdlog/common.h>
@@ -6,7 +8,7 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
-#include <args.hpp>
+#include <argparse/argparse.hpp>
 #include <atomic>
 #include <cassert>
 #include <constants.hpp>
@@ -15,7 +17,6 @@
 #include <music_player.hpp>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
-#include <syncstream>
 #include <test_seed.hpp>
 #include <thread>
 #include <unordered_set>
@@ -32,7 +33,8 @@ std::atomic_uint32_t CURRENT_G_MTRAND_SEED(0x0);
 
 static const std::unordered_set<std::uint16_t> IGNORE_MUSIC_ID_SET{0xffff,
                                                                    0xcccc, 0x0};
-
+/*
+TODO: delete
 void print_dolphin_status(DolphinComm::DolphinAccessor const &dolphin) {
   auto const status = dolphin.getStatus();
   std::string s{};
@@ -48,8 +50,10 @@ void print_dolphin_status(DolphinComm::DolphinAccessor const &dolphin) {
 
   spdlog::info("dolphin status: {}", s);
 }
+*/
 
-void music_player_thread_main(Playlist &&playlist) {
+void music_player_thread_main(Playlist &&playlist,
+                              bool const is_use_std_random_device) {
   try {
     // initialize system
 
@@ -81,10 +85,17 @@ void music_player_thread_main(Playlist &&playlist) {
 
         // music changed in game, play
 
-        // retrive g_mtRand.seed value
+        // retrieve g_mtRand.seed value
         std::uint32_t const seed = CURRENT_G_MTRAND_SEED.load();
+        std::optional<MusicEntry> music_entry_opt;
+        if (is_use_std_random_device) {
+          music_entry_opt =
+              playlist.random_music_for_with_std_random_device(music_id);
+        } else {
+          music_entry_opt =
+              playlist.random_music_for_with_g_mtRand_seed(music_id, seed);
+        }
 
-        auto const music_entry_opt = playlist.random_music_for(music_id, seed);
         if (!music_entry_opt.has_value()) {
           spdlog::warn("No music entry found for music id {:#x}.", music_id);
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -108,109 +119,131 @@ void music_player_thread_main(Playlist &&playlist) {
   }
 }
 
+void xtool_play_music_main(std::string_view const config_file_path,
+                           bool const is_use_std_random_device) {
+  DolphinManager dm;
+
+  spdlog::info("Load config file '{}'.", config_file_path);
+  Playlist pl(config_file_path);
+  spdlog::info("Loaded config file successfully.");
+
+  auto music_player_thread = std::thread(
+      music_player_thread_main, std::move(pl), is_use_std_random_device);
+
+  while (true) {
+
+    // read emulator memory
+    std::uint16_t music_id;
+    // assert(dolphin.isValidConsoleAddress(CURRENT_MUSIC_ID_ADDRESS));
+    auto const read1 = dm.dolphin().readFromRAM(
+        xtool::constants::CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
+        sizeof(std::uint16_t), false);
+
+    std::uint32_t seed;
+    static_assert(sizeof(std::uint32_t) == 0x4);
+    auto const read2 = dm.dolphin().readFromRAM(
+        xtool::constants::G_MTRAND_SEED_ADDRESS, (char *)(&seed), 0x4, false);
+
+    if (!read1) {
+      spdlog::error("Failed to read current music id from the game memory.");
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      continue;
+    }
+    if (!read2) {
+      spdlog::error("Failed to read g_mtRand.seed from the game memory.");
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      continue;
+    }
+
+    // spdlog::info("Current music id:
+    //  {:#x}", music_id);
+
+    CURRENT_MUSIC_ID.store(music_id);
+    CURRENT_G_MTRAND_SEED.store(seed);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+
+  // TODO: maybe handle signals?
+  music_player_thread.join();
+}
+
 int main(int argc, char **argv) {
 
+  argparse::ArgumentParser program("xtool");
+  program.add_argument("--config")
+      .help("xtool config toml file path to use.")
+      .default_value(std::string("./config.toml"));
+  program.add_argument("--use-random-device")
+      .help("Use std::random_device instead of in game g_mtRand.seed for "
+            "random function seeds.")
+      .flag();
+
+  argparse::ArgumentParser sub_command_inspect("inspect");
+  sub_command_inspect.add_description("Inspect xtool config and playlists.");
+  sub_command_inspect.add_argument("--config")
+      .help("xtool config toml file path to use.")
+      .default_value(std::string("./config.toml"));
+
+  argparse::ArgumentParser sub_command_seedtest("seedtest");
+  sub_command_seedtest.add_description(
+      "Test random function with g_mtRand.seed.");
+  sub_command_seedtest.add_argument("random distribution range start")
+      .default_value(std::uint32_t{0})
+      .help("");
+  sub_command_seedtest.add_argument("random distribution range end")
+      .default_value(std::uint32_t(300))
+      .help("");
+  sub_command_seedtest.add_argument("count")
+      .default_value(std::uint32_t{3000})
+      .help("");
+
+  program.add_subparser(sub_command_inspect);
+  program.add_subparser(sub_command_seedtest);
+
   try {
-    auto sleep_fn = [](int const msec) {
-      std::this_thread::sleep_for(
-          std::chrono::duration(std::chrono::milliseconds(msec)));
-    };
+    program.parse_args(argc, argv);
 
     auto logger = spdlog::stdout_color_mt("xtool-logger");
     spdlog::set_default_logger(logger);
-    // spdlog::set_level(spdlog::level::debug);
+#ifdef XTOOL_DEBUG
+    spdlog::set_level(spdlog::level::debug);
+#endif
     spdlog::set_pattern("[%Y-%m-%d %T.%f] [%^%l%$] [thread %t] %v");
 
-    auto const vm = parse_program_options(argc, argv);
-    auto const config_file_path =
-        std::filesystem::path(vm["config"].as<std::string>());
-
+    if (program["help"] == true) {
+      std::cout << program << std::endl;
+      return EXIT_SUCCESS;
+    }
     spdlog::info("xtool launched");
 
-    if (vm.count("test_seed")) {
-      test_seed(0, 100, 1000);
+    if (program.is_subcommand_used(sub_command_inspect)) {
+      auto const config_path = program.get<std::string>("--config");
+      inspect_config(config_path);
       return EXIT_SUCCESS;
     }
 
-    spdlog::info("Load config file '{}'", config_file_path.string());
-    Playlist pl(config_file_path);
-    spdlog::info("Loaded config file successfully.");
-
-    if (vm.count("inspect")) {
-      inspect_config(pl);
+    if (program.is_subcommand_used(sub_command_seedtest)) {
+      auto const start =
+          sub_command_seedtest.get<std::uint32_t>("random distribution range start");
+      auto const end =
+          sub_command_seedtest.get<std::uint32_t>("random distribution range end");
+      auto const count = sub_command_seedtest.get<std::uint32_t>("count");
+      test_seed(start, end, count);
       return EXIT_SUCCESS;
     }
 
-    auto dolphin = DolphinComm::DolphinAccessor{};
-    dolphin.init();
+    auto const config_file_path = program.get<std::string>("--config");
+    auto const is_use_std_random_device =
+        program.get<bool>("--use-random-device");
+    xtool_play_music_main(config_file_path, is_use_std_random_device);
 
     // try to find dolphin process
-    while (true) {
-      spdlog::info("Waiting for dolphin ...");
 
-      dolphin.hook();
-      auto const status = dolphin.getStatus();
-
-      print_dolphin_status(dolphin);
-
-      if (status == DolphinComm::DolphinStatus::hooked) {
-        break;
-      }
-
-      sleep_fn(100);
-    }
-
-    spdlog::info("dolphin process hooked! (pid={:#x})", dolphin.getPID());
-
-    auto music_player_thread =
-        std::thread(music_player_thread_main, std::move(pl));
-
-    while (true) {
-      auto const is_game_running =
-          (dolphin.getStatus() == DolphinComm::DolphinStatus::hooked);
-      if (is_game_running) {
-        // read emulator memory
-        std::uint16_t music_id;
-        // assert(dolphin.isValidConsoleAddress(CURRENT_MUSIC_ID_ADDRESS));
-        auto const read1 = dolphin.readFromRAM(
-            xtool::constants::CURRENT_MUSIC_ID_ADDRESS, (char *)(&music_id),
-            sizeof(std::uint16_t), false);
-
-        std::uint32_t seed;
-        static_assert(sizeof(std::uint32_t) == 0x4);
-        auto const read2 =
-            dolphin.readFromRAM(xtool::constants::G_MTRAND_SEED_ADDRESS,
-                                (char *)(&seed), 0x4, false);
-
-        if (!read1) {
-          spdlog::error("Failed to read current music id.");
-
-          sleep_fn(10);
-          continue;
-        }
-        if (!read2) {
-          spdlog::error("Failed to read g_mtRand.seed.");
-          sleep_fn(10);
-          continue;
-        }
-
-        // spdlog::info("Current music id:
-        //  {:#x}", music_id);
-
-        CURRENT_MUSIC_ID.store(music_id);
-        CURRENT_G_MTRAND_SEED.store(seed);
-        sleep_fn(200);
-        continue;
-      }
-
-      spdlog::warn("Game is not running.");
-    }
-    music_player_thread.join();
     spdlog::info("xtool exit.");
     return EXIT_SUCCESS;
-  } catch (boost::program_options::error &e) {
-    spdlog::error("Invalid argument: {}", e.what());
-    return EXIT_FAILURE;
   } catch (std::exception const &e) {
     spdlog::error("Exception: {}", e.what());
     return EXIT_FAILURE;

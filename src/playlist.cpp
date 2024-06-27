@@ -253,13 +253,14 @@ Playlist::Playlist(
 }
 
 std::optional<MusicEntry>
-Playlist::random_music_for(BrawlMusicID const music_id,
-                           std::uint32_t const seed) {
+Playlist::random_music_for_with_g_mtRand_seed(BrawlMusicID const music_id,
+                                              std::uint32_t const seed) const {
   if (!m_brawl_music_id_to_unique_ids_map.count(music_id)) {
     return std::nullopt;
   }
 
-  auto const &unique_music_ids = m_brawl_music_id_to_unique_ids_map[music_id];
+  auto const &unique_music_ids =
+      m_brawl_music_id_to_unique_ids_map.at(music_id);
 
   if (unique_music_ids.size() == 0) {
     return std::nullopt;
@@ -267,6 +268,8 @@ Playlist::random_music_for(BrawlMusicID const music_id,
   // choose one randomly
 
   spdlog::info("Using seed {:#x}", seed);
+  spdlog::info("Found {} musics for brawl music id {:#x}.",
+               unique_music_ids.size(), music_id);
   auto const random_index = seed_rand(0, unique_music_ids.size() - 1, seed);
   auto const unique_music_id = unique_music_ids[random_index];
 
@@ -274,7 +277,40 @@ Playlist::random_music_for(BrawlMusicID const music_id,
     return std::nullopt;
   }
 
-  auto entry = m_music_map[unique_music_id];
+  auto entry = m_music_map.at(unique_music_id);
+  return entry;
+}
+
+std::optional<MusicEntry> Playlist::random_music_for_with_std_random_device(
+    BrawlMusicID const music_id) const {
+  if (!m_brawl_music_id_to_unique_ids_map.count(music_id)) {
+    return std::nullopt;
+  }
+
+  auto const &unique_music_ids =
+      m_brawl_music_id_to_unique_ids_map.at(music_id);
+
+  if (unique_music_ids.size() == 0) {
+    return std::nullopt;
+  }
+  // choose one randomly
+
+  spdlog::warn("Using std::random_device.");
+  spdlog::info("Found {} musics for brawl music id {:#x}.",
+               unique_music_ids.size(), music_id);
+  std::random_device rd;
+  std::mt19937 rng(rd());
+
+  std::uniform_int_distribution<std::size_t> dist(0,
+                                                  unique_music_ids.size() - 1);
+  std::size_t random_index = dist(rng);
+  auto const unique_music_id = unique_music_ids[random_index];
+
+  if (!m_music_map.count(unique_music_id)) {
+    return std::nullopt;
+  }
+
+  auto entry = m_music_map.at(unique_music_id);
   return entry;
 }
 
