@@ -1,8 +1,13 @@
+#include "playlist.hpp"
 #include <inspection.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
-void inspect_config(Playlist const &playlist) {
+void inspect_config(std::string_view const config_file_path) {
+
+  spdlog::info("Inspect config");
+  Playlist playlist(config_file_path);
+
   auto const music_map = playlist.music_map();
   auto const brawl_music_id_to_unique_ids_map =
       playlist.brawl_music_id_to_unique_ids_map();
