@@ -1,7 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <filesystem>
+#include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/std.h> // std::optional formatter
 #include <iostream>
 #include <memory>
 #include <random>
@@ -19,6 +21,19 @@ struct MusicEntry {
   std::filesystem::path music_file_path;
   std::pair<std::uint64_t, std::uint64_t> start_end_offsets;
   std::optional<std::pair<std::uint64_t, std::uint64_t>> loop_start_end_offsets;
+};
+
+// std::pair formatter
+template <typename T, typename U>
+struct fmt::formatter<std::pair<T, U>> : fmt::formatter<std::string_view> {
+  auto format(std::pair<T, U> const &pair,
+              auto &ctx) const -> format_context::iterator;
+};
+
+// MusicEntry formatter
+template <> struct fmt::formatter<MusicEntry> : formatter<fmt::string_view> {
+  auto format(MusicEntry const &me,
+              format_context &ctx) const -> format_context::iterator;
 };
 
 struct PlaylistEntry {
@@ -46,6 +61,9 @@ public:
   [[nodiscard]] std::unordered_map<BrawlMusicID,
                                    std::shared_ptr<PlaylistEntry>> const &
   brawl_music_id_to_playlist_entry_map() const noexcept;
+
+  [[nodiscard]] std::vector<std::shared_ptr<PlaylistEntry>> const &
+  playlist_entries() const noexcept;
 
 private:
   // unique music id to music entry

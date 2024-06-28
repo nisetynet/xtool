@@ -9,6 +9,23 @@
 #include <toml++/impl/array.hpp>
 #include <unordered_map>
 
+template <typename T, typename U>
+auto fmt::formatter<std::pair<T, U>>::format(
+    std::pair<T, U> const &pair, auto &ctx) const -> format_context::iterator {
+  return fmt::format_to(ctx.out(), "({}, {})", pair.first, pair.second);
+}
+
+auto fmt::formatter<MusicEntry>::format(MusicEntry const &me,
+                                        format_context &ctx) const
+    -> format_context::iterator {
+  return fmt::format_to(
+      ctx.out(),
+      "id={}, file={}, start offset={}, end offset={}, loop offsets={}",
+      me.unique_music_id, me.music_file_path.string(),
+      me.start_end_offsets.first, me.start_end_offsets.second,
+      me.loop_start_end_offsets);
+}
+
 Playlist::Playlist(
     std::filesystem::path const &playlist_config_toml_file_path) {
   toml::parse_result result =
@@ -110,7 +127,7 @@ Playlist::Playlist(
     }
 
     if (!std::filesystem::is_regular_file(music_file_path_value)) {
-      throw std::runtime_error(fmt::format("{} is not a music file!",
+      throw std::runtime_error(fmt::format("{} is not a regular file!",
                                            music_file_path_value.string()));
     }
 
@@ -354,6 +371,11 @@ std::optional<MusicEntry> Playlist::random_music_for_with_std_random_device(
 std::unordered_map<UniqueMusicID, MusicEntry> const &
 Playlist::music_map() const noexcept {
   return m_music_map;
+}
+
+std::vector<std::shared_ptr<PlaylistEntry>> const &
+Playlist::playlist_entries() const noexcept {
+  return m_playlist_entries;
 }
 
 std::unordered_map<BrawlMusicID, std::shared_ptr<PlaylistEntry>> const &
