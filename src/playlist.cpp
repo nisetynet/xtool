@@ -6,6 +6,8 @@
 #include <playlist.hpp>
 #include <random>
 #include <stdexcept>
+#include <toml++/impl/array.hpp>
+#include <unordered_map>
 
 Playlist::Playlist(
     std::filesystem::path const &playlist_config_toml_file_path) {
@@ -18,8 +20,6 @@ Playlist::Playlist(
 
   // construct map
   std::unordered_map<UniqueMusicID, MusicEntry> music_map{};
-  std::unordered_map<std::uint16_t, std::vector<UniqueMusicID>>
-      music_id_music_map_key_map{};
 
   auto musics = table["musics"]["musics"];
 
@@ -173,6 +173,8 @@ Playlist::Playlist(
   std::unordered_map<BrawlMusicID, std::vector<UniqueMusicID>>
       brawl_music_id_to_unique_ids_map{};
 
+  std::vector<std::shared_ptr<PlaylistEntry>> playlist_entries;
+
   // read other tables
   for (auto const &entry : table) {
     if (entry.first.str() == "musics") {
@@ -189,21 +191,28 @@ Playlist::Playlist(
     assert(playlist_table);
 
     spdlog::info("Reading unique music ids for table: {}", entry.first.str());
-    auto unique_music_ids = std::vector<std::uint64_t>{};
 
+    // playlist musics
     auto const musics = playlist_table->get("musics");
     if (!musics) {
-      throw std::runtime_error("musics table not found.");
+      throw std::runtime_error(fmt::format(
+          "Playlist {}, a musics table not found.", entry.first.str()));
     }
     if (!musics->is_array()) {
-      throw std::runtime_error("Expected musics array.");
+      throw std::runtime_error(fmt::format(
+          "Playlist {}, expected an array for musics.", entry.first.str()));
     }
     auto const music_array = musics->as_array();
     assert(music_array);
 
+    auto unique_music_ids = std::vector<std::uint64_t>{};
+    unique_music_ids.reserve(512);
+
     music_array->for_each([&](auto &elm) {
       if (!elm.is_integer()) {
-        throw std::runtime_error("Expected an integer.");
+        throw std::runtime_error(
+            fmt::format("Playlist {}, expected an integer for music id.",
+                        entry.first.str()));
       }
       auto const unique_music_id = elm.as_integer()->get();
       unique_music_ids.push_back(unique_music_id);
@@ -216,17 +225,25 @@ Playlist::Playlist(
 
     auto const target_ids = playlist_table->get("target_ids");
     if (!target_ids) {
-      throw std::runtime_error("target_ids not found.");
+      throw std::runtime_error(
+          fmt::format("Playlist {}, target_ids not found.", entry.first.str()));
     }
     if (!target_ids->is_array()) {
-      throw std::runtime_error("Expected an array.");
+      throw std::runtime_error(fmt::format(
+          "Playlist {}, expected an array for target_ids.", entry.first.str()));
     }
     auto const target_id_array = target_ids->as_array();
     assert(target_id_array);
 
+    // verify target ids
+    std::vector<BrawlMusicID> ids;
+    ids.reserve(target_id_array->size());
+
     target_id_array->for_each([&](auto &elm) {
       if (!elm.is_integer()) {
-        throw std::runtime_error("Expected an integer.");
+        throw std::runtime_error(
+            fmt::format("Playlist {}, expected an integer for target id.",
+                        entry.first.str()));
       }
       auto const target_id = elm.as_integer()->get();
 
@@ -235,11 +252,27 @@ Playlist::Playlist(
             fmt::format("Duplicated target id: {:#x}", target_id));
       }
       brawl_music_id_to_unique_ids_map[target_id] = unique_music_ids;
+
+      ids.push_back(target_id);
     });
+
+    auto playlist_entry = std::make_shared<PlaylistEntry>(PlaylistEntry{
+        entry.first.str().data(),
+        ids,
+        unique_music_ids,
+    });
+
+    playlist_entries.push_back(playlist_entry);
+
+    for (auto const target_id : ids) {
+      m_brawl_music_id_to_playlist_entry_map.insert(
+          std::make_pair(target_id, playlist_entry));
+    }
 
     spdlog::info("Loaded playlist {} successfully!", entry.first.str());
   }
-  m_brawl_music_id_to_unique_ids_map = brawl_music_id_to_unique_ids_map;
+
+  m_playlist_entries = playlist_entries;
 
   // for debugging
   /*
@@ -255,25 +288,27 @@ Playlist::Playlist(
 std::optional<MusicEntry>
 Playlist::random_music_for_with_g_mtRand_seed(BrawlMusicID const music_id,
                                               std::uint32_t const seed) const {
-  if (!m_brawl_music_id_to_unique_ids_map.count(music_id)) {
+  if (!m_brawl_music_id_to_playlist_entry_map.contains(music_id)) {
     return std::nullopt;
   }
 
-  auto const &unique_music_ids =
-      m_brawl_music_id_to_unique_ids_map.at(music_id);
+  auto const &playlist_entry =
+      m_brawl_music_id_to_playlist_entry_map.at(music_id);
 
-  if (unique_music_ids.size() == 0) {
+  if (playlist_entry->music_entries.size() == 0) {
     return std::nullopt;
   }
   // choose one randomly
 
   spdlog::info("Using seed {:#x}", seed);
-  spdlog::info("Found {} musics for brawl music id {:#x}.",
-               unique_music_ids.size(), music_id);
-  auto const random_index = seed_rand(0, unique_music_ids.size() - 1, seed);
-  auto const unique_music_id = unique_music_ids[random_index];
+  spdlog::info("Found PlaylistEntry {}, {} musics for brawl music id {:#x}.",
+               playlist_entry->name, playlist_entry->music_entries.size(),
+               music_id);
+  auto const random_index =
+      seed_rand(0, playlist_entry->music_entries.size() - 1, seed);
+  auto const unique_music_id = playlist_entry->music_entries[random_index];
 
-  if (!m_music_map.count(unique_music_id)) {
+  if (!m_music_map.contains(unique_music_id)) {
     return std::nullopt;
   }
 
@@ -283,30 +318,32 @@ Playlist::random_music_for_with_g_mtRand_seed(BrawlMusicID const music_id,
 
 std::optional<MusicEntry> Playlist::random_music_for_with_std_random_device(
     BrawlMusicID const music_id) const {
-  if (!m_brawl_music_id_to_unique_ids_map.count(music_id)) {
+  if (!m_brawl_music_id_to_playlist_entry_map.contains(music_id)) {
     return std::nullopt;
   }
 
-  auto const &unique_music_ids =
-      m_brawl_music_id_to_unique_ids_map.at(music_id);
+  auto const &playlist_entry =
+      m_brawl_music_id_to_playlist_entry_map.at(music_id);
 
-  if (unique_music_ids.size() == 0) {
+  if (playlist_entry->music_entries.size() == 0) {
     return std::nullopt;
   }
   // choose one randomly
 
   spdlog::warn("Using std::random_device.");
-  spdlog::info("Found {} musics for brawl music id {:#x}.",
-               unique_music_ids.size(), music_id);
+  spdlog::info("Found PlaylistEntry {}, {} musics for brawl music id {:#x}.",
+               playlist_entry->name, playlist_entry->music_entries.size(),
+               music_id);
+
   std::random_device rd;
   std::mt19937 rng(rd());
 
-  std::uniform_int_distribution<std::size_t> dist(0,
-                                                  unique_music_ids.size() - 1);
+  std::uniform_int_distribution<std::size_t> dist(
+      0, playlist_entry->music_entries.size() - 1);
   std::size_t random_index = dist(rng);
-  auto const unique_music_id = unique_music_ids[random_index];
+  auto const unique_music_id = playlist_entry->music_entries[random_index];
 
-  if (!m_music_map.count(unique_music_id)) {
+  if (!m_music_map.contains(unique_music_id)) {
     return std::nullopt;
   }
 
@@ -319,9 +356,9 @@ Playlist::music_map() const noexcept {
   return m_music_map;
 }
 
-std::unordered_map<BrawlMusicID, std::vector<UniqueMusicID>> const &
-Playlist::brawl_music_id_to_unique_ids_map() const noexcept {
-  return m_brawl_music_id_to_unique_ids_map;
+std::unordered_map<BrawlMusicID, std::shared_ptr<PlaylistEntry>> const &
+Playlist::brawl_music_id_to_playlist_entry_map() const noexcept {
+  return m_brawl_music_id_to_playlist_entry_map;
 }
 
 // メモ:

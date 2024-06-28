@@ -181,11 +181,24 @@ int main(int argc, char **argv) {
             "random function seeds.")
       .flag();
 
-  argparse::ArgumentParser sub_command_inspect("inspect");
-  sub_command_inspect.add_description("Inspect xtool config and playlists.");
-  sub_command_inspect.add_argument("--config")
+  argparse::ArgumentParser sub_command_inspect_config("inspect-config");
+  sub_command_inspect_config.add_description(
+      "Inspect xtool config and playlists.");
+  sub_command_inspect_config.add_argument("--config")
       .help("xtool config toml file path to use.")
       .default_value(std::string("./config.toml"));
+
+  argparse::ArgumentParser sub_command_inspect_musics("inspect-musics");
+  sub_command_inspect_musics.add_argument("--config")
+      .help("xtool config toml file path to use.")
+      .default_value(std::string("./config.toml"));
+
+  sub_command_inspect_musics.add_description("Inspect registered musics.");
+  sub_command_inspect_musics.add_argument("--ids")
+      .nargs(argparse::nargs_pattern::at_least_one)
+      .scan<'u', UniqueMusicID>()
+      .help("Unique music ids to inspect.")
+      .required();
 
   argparse::ArgumentParser sub_command_seedtest("seedtest");
   sub_command_seedtest.add_description(
@@ -200,7 +213,8 @@ int main(int argc, char **argv) {
       .default_value(std::uint32_t{3000})
       .help("");
 
-  program.add_subparser(sub_command_inspect);
+  program.add_subparser(sub_command_inspect_config);
+  program.add_subparser(sub_command_inspect_musics);
   program.add_subparser(sub_command_seedtest);
 
   try {
@@ -219,17 +233,25 @@ int main(int argc, char **argv) {
     }
     spdlog::info("xtool launched");
 
-    if (program.is_subcommand_used(sub_command_inspect)) {
+    if (program.is_subcommand_used(sub_command_inspect_config)) {
       auto const config_path = program.get<std::string>("--config");
       inspect_config(config_path);
       return EXIT_SUCCESS;
     }
 
+    if (program.is_subcommand_used(sub_command_inspect_musics)) {
+      auto const config_path = program.get<std::string>("--config");
+      auto const unique_music_ids =
+          program.get<std::vector<UniqueMusicID>>("--ids");
+      inspect_musics(config_path, unique_music_ids);
+      return EXIT_SUCCESS;
+    }
+
     if (program.is_subcommand_used(sub_command_seedtest)) {
-      auto const start =
-          sub_command_seedtest.get<std::uint32_t>("random distribution range start");
-      auto const end =
-          sub_command_seedtest.get<std::uint32_t>("random distribution range end");
+      auto const start = sub_command_seedtest.get<std::uint32_t>(
+          "random distribution range start");
+      auto const end = sub_command_seedtest.get<std::uint32_t>(
+          "random distribution range end");
       auto const count = sub_command_seedtest.get<std::uint32_t>("count");
       test_seed(start, end, count);
       return EXIT_SUCCESS;
