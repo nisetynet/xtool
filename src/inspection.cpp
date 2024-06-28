@@ -23,7 +23,7 @@ void inspect_config(std::string_view const config_file_path) {
                  pe->target_music_ids.size(), pe->music_entries.size());
     for (auto const unique_music_id : pe->music_entries) {
       auto const &music = music_map.at(unique_music_id);
-      spdlog::info(fmt::format("\tMusic:{}", music));
+      spdlog::info(fmt::format("Music: {}", music));
     }
   }
 
@@ -70,7 +70,8 @@ void inspect_musics(std::string_view const config_file_path,
       continue;
     }
 
-    spdlog::info("Unique music id {} usages", unique_music_id);
+    spdlog::info(
+        fmt::format("Music: {}, usages", pl.music_map().at(unique_music_id)));
     auto const range = map.equal_range(unique_music_id);
     for (auto it = range.first; it != range.second; ++it) {
       spdlog::info("\tPlaylist {}", it->second->name);

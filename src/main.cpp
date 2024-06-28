@@ -189,14 +189,13 @@ int main(int argc, char **argv) {
       .default_value(std::string("./config.toml"));
 
   argparse::ArgumentParser sub_command_inspect_musics("inspect-musics");
+  sub_command_inspect_musics.add_description("Inspect registered musics.");
   sub_command_inspect_musics.add_argument("--config")
       .help("xtool config toml file path to use.")
       .default_value(std::string("./config.toml"));
-
-  sub_command_inspect_musics.add_description("Inspect registered musics.");
   sub_command_inspect_musics.add_argument("--ids")
       .nargs(argparse::nargs_pattern::at_least_one)
-      .scan<'u', UniqueMusicID>()
+      .scan<'u', std::uint64_t>()
       .help("Unique music ids to inspect.")
       .required();
 
@@ -234,15 +233,17 @@ int main(int argc, char **argv) {
     spdlog::info("xtool launched");
 
     if (program.is_subcommand_used(sub_command_inspect_config)) {
-      auto const config_path = program.get<std::string>("--config");
+      auto const config_path =
+          sub_command_inspect_config.get<std::string>("--config");
       inspect_config(config_path);
       return EXIT_SUCCESS;
     }
 
     if (program.is_subcommand_used(sub_command_inspect_musics)) {
-      auto const config_path = program.get<std::string>("--config");
+      auto const config_path =
+          sub_command_inspect_musics.get<std::string>("--config");
       auto const unique_music_ids =
-          program.get<std::vector<UniqueMusicID>>("--ids");
+          sub_command_inspect_musics.get<std::vector<std::uint64_t>>("--ids");
       inspect_musics(config_path, unique_music_ids);
       return EXIT_SUCCESS;
     }

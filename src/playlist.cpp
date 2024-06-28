@@ -6,24 +6,35 @@
 #include <playlist.hpp>
 #include <random>
 #include <stdexcept>
+#include <string>
 #include <toml++/impl/array.hpp>
 #include <unordered_map>
 
 template <typename T, typename U>
-auto fmt::formatter<std::pair<T, U>>::format(
-    std::pair<T, U> const &pair, auto &ctx) const -> format_context::iterator {
+auto fmt::formatter<std::pair<T, U>>::format(std::pair<T, U> const &pair,
+                                             auto &ctx) const
+    -> format_context::iterator {
   return fmt::format_to(ctx.out(), "({}, {})", pair.first, pair.second);
 }
 
 auto fmt::formatter<MusicEntry>::format(MusicEntry const &me,
                                         format_context &ctx) const
     -> format_context::iterator {
+
+  std::string start_offset_msg = std::to_string(me.start_end_offsets.first);
+  if (me.start_end_offsets.first == -1) {
+    start_offset_msg = "default";
+  }
+  std::string end_offset_msg = std::to_string(me.start_end_offsets.second);
+  if (me.start_end_offsets.second == -1) {
+    end_offset_msg = "default";
+  }
+
   return fmt::format_to(
       ctx.out(),
       "id={}, file={}, start offset={}, end offset={}, loop offsets={}",
-      me.unique_music_id, me.music_file_path.string(),
-      me.start_end_offsets.first, me.start_end_offsets.second,
-      me.loop_start_end_offsets);
+      me.unique_music_id, me.music_file_path.string(), start_offset_msg,
+      end_offset_msg, me.loop_start_end_offsets);
 }
 
 Playlist::Playlist(
