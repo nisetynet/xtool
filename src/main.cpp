@@ -203,12 +203,15 @@ int main(int argc, char **argv) {
   sub_command_seedtest.add_description(
       "Test random function with g_mtRand.seed.");
   sub_command_seedtest.add_argument("random distribution range start")
+      .scan<'u', std::uint32_t>()
       .default_value(std::uint32_t{0})
       .help("");
   sub_command_seedtest.add_argument("random distribution range end")
+      .scan<'u', std::uint32_t>()
       .default_value(std::uint32_t(300))
       .help("");
   sub_command_seedtest.add_argument("count")
+      .scan<'u', std::uint32_t>()
       .default_value(std::uint32_t{3000})
       .help("");
 
