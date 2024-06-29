@@ -16,31 +16,44 @@ Modified and directly included in the source.
 * miniaudio: https://github.com/mackron/miniaudio#license
 * toml++: https://marzer.github.io/tomlplusplus/
 ## How to build
-Using meson now.  
-TODO: write instructions.
-TODO: remove cmake(test building on windows first)
+You need a reasonably recent C++ compiler(C++20) and [meson](https://mesonbuild.com/Getting-meson.html) to build.
 
-~~You need a C++ compiler and [cmake](https://cmake.org/download/) to build.~~
 
-First, clone the repository.
+### Common
+Install meson.
+
+Clone the xtool git repository.
 
 ```bash
-git clone --recursive https://github.com/nisetynet/xtool
+git clone https://github.com/nisetynet/xtool
 ```
 
-### Linux
-In the source root directory, run
+#### Linux
+If you are using linux, you know what to do.
 
-
-### Windows
-
-#### Boost
+In the source root directory, run  
+```bash
+bash build.sh
 ```
-$env:BOOST_ROOT = "C:\path\to\Boost"
+
+You can find a built xtool binary in the `build` directory.
+
+#### Windows
+Ensure you have installed latest MSVC compiler.  
+
+You can use VisualStudio Installer to install latest MSVC: <https://learn.microsoft.com/en-us/visualstudio/install/install-visual-studio?view=vs-2022>
+
+In the source root directory, run  
+```bash
+./build.bat
 ```
+
+You can find a built xtool binary in the `win_build` directory.
+
 
 ## Usage
-TODO
+TODO (Put music files, write config file, launch xtool.)
+
 
 ## ⚠️
 Some features are broken.  
