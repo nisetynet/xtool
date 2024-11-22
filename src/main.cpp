@@ -311,7 +311,9 @@ int main(int argc, char **argv) {
   argparse::ArgumentParser sub_command_play("play");
   sub_command_play.add_description("Play music.(No need to run dolphin.)");
   sub_command_play.add_argument("--playlist").help("Playlist to play.");
-  sub_command_play.add_argument("--id").help("Music id to play.");
+  sub_command_play.add_argument("--id")
+      .scan<'u', std::uint64_t>()
+      .help("Music id to play.");
   sub_command_play.add_argument("--config")
       .help("xtool config toml file path to use.")
       .default_value(std::string("./config.toml"));
@@ -370,6 +372,7 @@ int main(int argc, char **argv) {
       auto const is_playlist_supplied = sub_command_play.is_used("--playlist");
       auto const is_music_id_supplied = sub_command_play.is_used("--id");
 
+      // spdlog::debug("{}, {}", is_playlist_supplied, is_music_id_supplied);
       if (is_playlist_supplied && is_music_id_supplied) {
         throw std::invalid_argument("--playlist and --id both supplied.");
       }
@@ -379,11 +382,10 @@ int main(int argc, char **argv) {
       }
 
       if (is_music_id_supplied) {
-        music_id = sub_command_play.get<UniqueMusicID>("--id");
+        music_id = sub_command_play.get<std::uint64_t>("--id");
       }
 
-      auto const config_path =
-          sub_command_inspect_musics.get<std::string>("--config");
+      auto const config_path = sub_command_play.get<std::string>("--config");
 
       xtool_play(config_path, playlist, music_id);
 
