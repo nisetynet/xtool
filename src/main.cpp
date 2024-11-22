@@ -319,6 +319,7 @@ int main(int argc, char **argv) {
   program.add_subparser(sub_command_inspect_config);
   program.add_subparser(sub_command_inspect_musics);
   program.add_subparser(sub_command_seedtest);
+  program.add_subparser(sub_command_play);
 
   try {
     program.parse_args(argc, argv);
