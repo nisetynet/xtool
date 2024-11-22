@@ -1,10 +1,16 @@
 #include "dolphin_manager.hpp"
 #include "playlist.hpp"
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
+#include <optional>
 #include <spdlog/common.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <stdexcept>
+#include <string_view>
+
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
@@ -170,6 +176,92 @@ void xtool_play_music_main(std::string_view const config_file_path,
   music_player_thread.join();
 }
 
+void xtool_play(std::string_view const config_file_path,
+                std::optional<std::string> playlist,
+                std::optional<UniqueMusicID> music_id) {
+  assert(!(playlist.has_value() && music_id.has_value()));
+
+  spdlog::info("Load config file '{}'.", config_file_path);
+  Playlist pl(config_file_path);
+  spdlog::info("Loaded config file successfully.");
+
+  spdlog::info("Initialize music player.");
+  auto music_player = MusicPlayer();
+  spdlog::info("Initialized music player successfully.");
+
+  // play playlist musics
+  if (playlist.has_value()) {
+    std::shared_ptr<PlaylistEntry> target_playlist = nullptr;
+
+    for (auto const &pl : pl.playlist_entries()) {
+      if (pl->name == playlist.value()) {
+        spdlog::info("Found playlist {}", playlist.value());
+        target_playlist = pl;
+        break;
+      }
+    }
+
+    if (!target_playlist) {
+      throw std::invalid_argument(
+          fmt::format("Playlist {} not found", playlist.value()));
+    }
+
+    auto music_entries = target_playlist->music_entries;
+
+    // shuffle music order
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(music_entries.begin(), music_entries.end(), g);
+
+    auto count = 0;
+    for (auto const music_id : music_entries) {
+      ++count;
+      assert(pl.music_map().contains(music_id));
+      auto const &music = pl.music_map().at(music_id);
+
+      spdlog::info("[{}/{}]", count, music_entries.size());
+      if (!music_player.play(music)) {
+        spdlog::error("Failed to play music.");
+        continue;
+      };
+    }
+
+    spdlog::info("Finished.");
+    return;
+  }
+
+  // play a music
+  if (music_id.has_value()) {
+
+    if (!pl.music_map().contains(music_id.value())) {
+      throw std::invalid_argument(
+          fmt::format("Music with id {} not found.", music_id.value()));
+    }
+    auto const &music = pl.music_map().at(music_id.value());
+    if (!music_player.play(music)) {
+      spdlog::error("Failed to play music.");
+    };
+    spdlog::info("Finished.");
+    return;
+  }
+
+  // play random
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  std::uniform_int_distribution<std::size_t> dist(0, pl.music_map().size() - 1);
+  std::size_t n = dist(rng);
+
+  auto map_iter = pl.music_map().begin();
+  std::advance(map_iter, n);
+  auto const &music_entry = map_iter->second;
+
+  if (!music_player.play(music_entry)) {
+    spdlog::error("Failed to play music.");
+  };
+
+  spdlog::info("Finished.");
+}
+
 int main(int argc, char **argv) {
 
   argparse::ArgumentParser program("xtool");
@@ -215,6 +307,15 @@ int main(int argc, char **argv) {
       .default_value(std::uint32_t{3000})
       .help("");
 
+  // play
+  argparse::ArgumentParser sub_command_play("play");
+  sub_command_play.add_description("Play music.(No need to run dolphin.)");
+  sub_command_play.add_argument("--playlist").help("Playlist to play.");
+  sub_command_play.add_argument("--id").help("Music id to play.");
+  sub_command_play.add_argument("--config")
+      .help("xtool config toml file path to use.")
+      .default_value(std::string("./config.toml"));
+
   program.add_subparser(sub_command_inspect_config);
   program.add_subparser(sub_command_inspect_musics);
   program.add_subparser(sub_command_seedtest);
@@ -258,6 +359,33 @@ int main(int argc, char **argv) {
           "random distribution range end");
       auto const count = sub_command_seedtest.get<std::uint32_t>("count");
       test_seed(start, end, count);
+      return EXIT_SUCCESS;
+    }
+
+    if (program.is_subcommand_used(sub_command_play)) {
+      std::optional<std::string> playlist = std::nullopt;
+      std::optional<UniqueMusicID> music_id = std::nullopt;
+
+      auto const is_playlist_supplied = sub_command_play.is_used("--playlist");
+      auto const is_music_id_supplied = sub_command_play.is_used("--id");
+
+      if (is_playlist_supplied && is_music_id_supplied) {
+        throw std::invalid_argument("--playlist and --id both supplied.");
+      }
+
+      if (is_playlist_supplied) {
+        playlist = sub_command_play.get<std::string>("--playlist");
+      }
+
+      if (is_music_id_supplied) {
+        music_id = sub_command_play.get<UniqueMusicID>("--id");
+      }
+
+      auto const config_path =
+          sub_command_inspect_musics.get<std::string>("--config");
+
+      xtool_play(config_path, playlist, music_id);
+
       return EXIT_SUCCESS;
     }
 
