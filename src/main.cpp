@@ -176,6 +176,11 @@ void xtool_play_music_main(std::string_view const config_file_path,
   music_player_thread.join();
 }
 
+void wait_for_input() {
+  std::thread th([]() { std::cin.get(); });
+  th.join();
+}
+
 void xtool_play(std::string_view const config_file_path,
                 std::optional<std::string> playlist,
                 std::optional<UniqueMusicID> music_id) {
@@ -224,6 +229,8 @@ void xtool_play(std::string_view const config_file_path,
         spdlog::error("Failed to play music.");
         continue;
       };
+      spdlog::info("Press enter to play next song.");
+      wait_for_input();
     }
 
     spdlog::info("Finished.");
@@ -241,6 +248,8 @@ void xtool_play(std::string_view const config_file_path,
     if (!music_player.play(music)) {
       spdlog::error("Failed to play music.");
     };
+    spdlog::info("Press enter to finish.");
+    wait_for_input();
     spdlog::info("Finished.");
     return;
   }
@@ -258,6 +267,9 @@ void xtool_play(std::string_view const config_file_path,
   if (!music_player.play(music_entry)) {
     spdlog::error("Failed to play music.");
   };
+
+  spdlog::info("Press enter to finish.");
+  wait_for_input();
 
   spdlog::info("Finished.");
 }
@@ -311,9 +323,8 @@ int main(int argc, char **argv) {
   argparse::ArgumentParser sub_command_play("play");
   sub_command_play.add_description("Play music.(No need to run dolphin.)");
   sub_command_play.add_argument("--playlist").help("Playlist to play.");
-  sub_command_play.add_argument("--id")
-      .scan<'u', std::uint64_t>()
-      .help("Music id to play.");
+  sub_command_play.add_argument("--id").scan<'u', std::uint64_t>().help(
+      "Music id to play.");
   sub_command_play.add_argument("--config")
       .help("xtool config toml file path to use.")
       .default_value(std::string("./config.toml"));
